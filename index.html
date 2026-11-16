@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>喵境远征</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <h1>喵境远征</h1>
+      <p>像素猫咪横版肉鸽 · 四把武器 · 九种攻击模组</p>
+    </header>
+    <section class="stage" aria-label="游戏画面">
+      <canvas id="game" width="960" height="540"></canvas>
+      <div id="ui" class="ui"></div>
+    </section>
+    <section class="help" aria-label="操作说明">
+      <span><kbd>A</kbd>/<kbd>D</kbd> 或 <kbd>←</kbd>/<kbd>→</kbd> 移动</span>
+      <span><kbd>空格</kbd> 跳跃</span>
+      <span><kbd>J</kbd> 攻击（可按住）</span>
+      <span><kbd>K</kbd> 冲刺</span>
+      <span><kbd>Q</kbd> 切换武器</span>
+      <span><kbd>E</kbd> 交互（宝箱 / 出口）</span>
+      <span><kbd>Esc</kbd> 暂停</span>
+    </section>
+  </main>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

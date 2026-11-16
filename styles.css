@@ -1,0 +1,343 @@
+:root {
+  --ink: #1b1a24;
+  --paper: #f6eed8;
+  --panel: #2b2a3d;
+  --panel-edge: #121119;
+  --accent: #ffcf4a;
+  --accent-dark: #c4861c;
+  --good: #7fd36b;
+  --bad: #e5584f;
+  --muted: #a9a5bf;
+  font-family: "Zpix", "Fusion Pixel", "Microsoft YaHei", "PingFang SC", monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #15141e radial-gradient(circle at 50% 0%, #33304a, #15141e 70%);
+  color: var(--paper);
+}
+
+.page {
+  width: min(100%, calc((100vh - 150px) * 16 / 9), 1280px);
+  min-width: 320px;
+  margin: 0 auto;
+  padding: 12px;
+}
+
+.masthead {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: 4px;
+  color: var(--accent);
+  text-shadow: 3px 3px 0 var(--panel-edge);
+}
+
+.masthead p { margin: 0; color: var(--muted); }
+
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-top: 10px;
+  border: 4px solid var(--panel-edge);
+  box-shadow: 0 0 0 4px #4a4766, 0 12px 40px #0008;
+  background: #6fb8e0;
+  overflow: hidden;
+  container-type: inline-size;
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-size: clamp(10px, 1.6cqi, 16px);
+}
+
+.help {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 1px 5px;
+  border: 2px solid var(--panel-edge);
+  border-bottom-width: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+}
+
+[hidden] { display: none !important; }
+
+.ui button {
+  pointer-events: auto;
+  font: inherit;
+  color: var(--paper);
+  cursor: pointer;
+}
+
+.ui button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  padding: 0.8em;
+  text-shadow: 2px 2px 0 var(--panel-edge);
+}
+
+.hud-top {
+  display: flex;
+  align-items: center;
+  gap: 1.2em;
+}
+
+.hud-hp {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.hud-label { color: var(--accent); }
+
+.hud-hp-bar {
+  width: 12em;
+  height: 1em;
+  border: 2px solid var(--panel-edge);
+  background: #3b1c22;
+}
+
+.hud-hp-fill {
+  height: 100%;
+  background: linear-gradient(#ff8a7a, var(--bad));
+  transition: width 0.15s linear;
+}
+
+.hud-coins { color: var(--accent); }
+
+.hud-room {
+  margin-left: auto;
+  color: var(--paper);
+}
+
+.hud-mute {
+  padding: 0.2em 0.6em;
+  border: 2px solid var(--panel-edge);
+  background: #2b2a3dcc;
+}
+
+.hud-weapons {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6em;
+  margin-top: 0.6em;
+}
+
+.hud-weapon {
+  min-width: 9.5em;
+  padding: 0.35em 0.5em;
+  border: 2px solid var(--panel-edge);
+  background: #2b2a3db3;
+  opacity: 0.75;
+}
+
+.hud-weapon.active {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+.hud-weapon-name { margin-bottom: 0.25em; }
+
+.hud-slots {
+  display: flex;
+  gap: 0.25em;
+}
+
+.hud-slot {
+  flex: 1;
+  padding: 0 0.2em;
+  border: 1px solid #ffffff40;
+  background: #4a4766;
+  font-size: 0.8em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hud-slot.empty { color: var(--muted); }
+
+.hud-cooldown {
+  height: 0.3em;
+  margin-top: 0.3em;
+  background: #00000060;
+}
+
+.hud-cooldown-fill {
+  height: 100%;
+  background: var(--good);
+}
+
+.hud-hint {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1em;
+  pointer-events: auto;
+  background: #120f1c99;
+}
+
+.title-screen { background: #120f1cb3; }
+
+.panel {
+  width: min(46em, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 1.2em 1.4em;
+  border: 4px solid var(--panel-edge);
+  box-shadow: 0 0 0 3px #4a4766, 6px 6px 0 #0008;
+  background: var(--panel);
+  text-align: center;
+}
+
+.panel-title {
+  margin: 0 0 0.4em;
+  font-size: 1.6em;
+  color: var(--accent);
+  text-shadow: 2px 2px 0 var(--panel-edge);
+}
+
+.panel-line {
+  margin: 0.2em 0;
+  color: var(--muted);
+}
+
+.panel-status {
+  min-height: 1.3em;
+  margin: 0.6em 0 0;
+  color: var(--bad);
+}
+
+.weapon-cards,
+.offer-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9em, 1fr));
+  gap: 0.7em;
+  margin: 0.9em 0;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+  padding: 0.7em;
+  border: 3px solid var(--panel-edge);
+  background: #3a3852;
+  text-align: left;
+}
+
+.card:hover:not([disabled]),
+.choice:hover:not([disabled]) { background: #4a4766; }
+
+.card[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: #4d4566;
+}
+
+.card[disabled],
+.choice[disabled] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.card-title { color: var(--paper); }
+
+.card-text {
+  color: var(--muted);
+  font-size: 0.85em;
+  line-height: 1.4;
+}
+
+.card-price { color: var(--accent); }
+
+.card-note { color: var(--bad); }
+
+.card-icon {
+  width: 1.4em;
+  height: 1.4em;
+  border: 2px solid var(--panel-edge);
+}
+
+.weapon-card[data-weapon="icecream"] .card-icon { background: #ff9ccf; }
+.weapon-card[data-weapon="crossbow"] .card-icon { background: #9ad8ff; }
+.weapon-card[data-weapon="yarn"] .card-icon { background: #c88cff; }
+.weapon-card[data-weapon="sword"] .card-icon { background: #e8e8f0; }
+
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  margin: 0.9em 0;
+}
+
+.choice {
+  padding: 0.6em 0.8em;
+  border: 3px solid var(--panel-edge);
+  background: #3a3852;
+  text-align: left;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.8em;
+  margin-top: 0.6em;
+}
+
+.primary,
+.secondary {
+  padding: 0.5em 1.4em;
+  border: 3px solid var(--panel-edge);
+  border-bottom-width: 5px;
+}
+
+.primary {
+  background: var(--accent-dark);
+  font-size: 1.15em;
+}
+
+.secondary { background: #4a4766; }
+
+.primary:hover,
+.secondary:hover { filter: brightness(1.15); }
