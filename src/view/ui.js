@@ -165,7 +165,7 @@ export function nextVolume(volume) {
 
 const MENU_PREV = new Set(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW']);
 const MENU_NEXT = new Set(['ArrowRight', 'ArrowDown', 'KeyD', 'KeyS']);
-const MENU_CONFIRM = new Set(['KeyJ', 'Space', 'Enter', 'NumpadEnter']);
+const MENU_CONFIRM = new Set(['Space']);
 
 export function menuKey(code, current, entries) {
   const enabled = entries.flatMap((entry, i) => (entry.disabled ? [] : [i]));
@@ -281,7 +281,7 @@ export function mountUI(root, options) {
     if (result?.ok !== false) titleOpen = false;
     render();
   });
-  const keyHint = () => el('p', 'panel-hint', '键盘：WASD / 方向键 选择 · J / 空格 / 回车 确认 · 数字键 直选');
+  const keyHint = () => el('p', 'panel-hint', '键盘：WASD / 方向键 选择 · 空格 确认 · 数字键 直选');
   titlePanel.append(
     el('h2', 'panel-title', '选择你的起始武器'),
     el('p', 'panel-line', '穿越 6 间战斗房间与商店，击败最终的甜点大王。'),
