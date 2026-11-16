@@ -325,6 +325,44 @@ kbd {
   margin-top: 0.6em;
 }
 
+.card,
+.choice { position: relative; }
+
+.card:focus:not([disabled]),
+.choice:focus:not([disabled]) {
+  border-color: var(--accent);
+  background: #55507a;
+}
+
+.secondary:focus { box-shadow: 0 0 0 3px var(--accent); }
+
+.card-key {
+  position: absolute;
+  top: 0.35em;
+  right: 0.45em;
+  min-width: 1.3em;
+  padding: 0 0.25em;
+  border: 2px solid var(--panel-edge);
+  background: var(--accent);
+  color: var(--panel-edge);
+  font-size: 0.8em;
+  font-weight: bold;
+  text-align: center;
+}
+
+.choice-list .card-key {
+  position: static;
+  display: inline-block;
+  margin-right: 0.5em;
+}
+
+.panel-hint {
+  margin: 0.7em 0 0;
+  color: var(--muted);
+  font-size: 0.8em;
+  text-align: center;
+}
+
 .primary,
 .secondary {
   padding: 0.5em 1.4em;

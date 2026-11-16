@@ -163,6 +163,28 @@ export function nextVolume(volume) {
   return VOLUME_LEVELS.find(level => level > volume + 1e-6) ?? VOLUME_LEVELS[0];
 }
 
+const MENU_PREV = new Set(['ArrowLeft', 'ArrowUp', 'KeyA', 'KeyW']);
+const MENU_NEXT = new Set(['ArrowRight', 'ArrowDown', 'KeyD', 'KeyS']);
+const MENU_CONFIRM = new Set(['KeyJ', 'Space', 'Enter', 'NumpadEnter']);
+
+export function menuKey(code, current, entries) {
+  const enabled = entries.flatMap((entry, i) => (entry.disabled ? [] : [i]));
+  if (MENU_PREV.has(code) || MENU_NEXT.has(code)) {
+    if (enabled.length === 0) return null;
+    const at = enabled.indexOf(current);
+    if (at < 0) return { focus: enabled[0] };
+    const step = MENU_NEXT.has(code) ? 1 : -1;
+    return { focus: enabled[(at + step + enabled.length) % enabled.length] };
+  }
+  if (MENU_CONFIRM.has(code)) return enabled.includes(current) ? { press: current } : null;
+  const digit = /^(?:Digit|Numpad)([1-9])$/.exec(code);
+  if (digit) {
+    const index = entries.findIndex(entry => entry.number === Number(digit[1]));
+    return index >= 0 && !entries[index].disabled ? { press: index } : null;
+  }
+  return null;
+}
+
 function roomLabel(run) {
   if (run.roomIndex >= BOSS_ROOM) return '最终房间 · Boss';
   return `${ZONE_NAMES[zoneOf(run.roomIndex)]} · 第 ${run.roomIndex + 1}/${BOSS_ROOM} 间`;
@@ -177,6 +199,7 @@ export function mountUI(root, options) {
   let volume = options.volume ?? 0.75;
   let message = '';
   let dialogKey = '';
+  let dialogEntries = [];
   const hudCache = new Map();
 
   const el = (tag, className, text) => {
@@ -242,13 +265,13 @@ export function mountUI(root, options) {
   const title = el('div', 'screen title-screen');
   const titlePanel = el('div', 'panel');
   const cards = el('div', 'weapon-cards');
-  const cardButtons = WEAPON_ORDER.map(id => {
+  const cardButtons = WEAPON_ORDER.map((id, i) => {
     const card = button('card weapon-card', undefined, () => {
       selectedWeapon = id;
       render();
     });
     card.dataset.weapon = id;
-    card.append(el('span', 'card-icon'), el('strong', 'card-title', WEAPONS[id].name), el('span', 'card-text', WEAPONS[id].description));
+    card.append(el('span', 'card-key', String(i + 1)), el('span', 'card-icon'), el('strong', 'card-title', WEAPONS[id].name), el('span', 'card-text', WEAPONS[id].description));
     return card;
   });
   cards.append(...cardButtons);
@@ -258,13 +281,19 @@ export function mountUI(root, options) {
     if (result?.ok !== false) titleOpen = false;
     render();
   });
+  const keyHint = () => el('p', 'panel-hint', '键盘：WASD / 方向键 选择 · J / 空格 / 回车 确认 · 数字键 直选');
   titlePanel.append(
     el('h2', 'panel-title', '选择你的起始武器'),
     el('p', 'panel-line', '穿越 6 间战斗房间与商店，击败最终的甜点大王。'),
     cards,
-    startButton
+    startButton,
+    keyHint()
   );
   title.append(titlePanel);
+  const titleEntries = [
+    ...cardButtons.map((node, i) => ({ node, number: i + 1, disabled: false })),
+    { node: startButton, disabled: false }
+  ];
 
   const dialog = el('div', 'screen dialog-screen');
   dialog.setAttribute('role', 'dialog');
@@ -295,26 +324,54 @@ export function mountUI(root, options) {
     dialog.setAttribute('aria-labelledby', heading.id);
     panel.append(heading);
     for (const line of model.lines) panel.append(el('p', 'panel-line', line));
+    dialogEntries = [];
     if (model.items.length > 0) {
       const list = el('div', model.state === 'equipment' ? 'choice-list' : 'offer-cards');
-      for (const item of model.items) {
+      model.items.forEach((item, i) => {
         const node = button(model.state === 'equipment' ? 'choice' : 'card', undefined, () => act(item.action));
         node.disabled = item.disabled;
+        const number = i < 9 ? i + 1 : undefined;
+        if (number) node.append(el('span', 'card-key', String(number)));
         node.append(el('strong', 'card-title', item.label));
         if (item.description) node.append(el('span', 'card-text', item.description));
         if (item.price !== undefined) node.append(el('span', 'card-price', `${item.price} 金币`));
         if (item.note) node.append(el('span', 'card-note', item.note));
         list.append(node);
-      }
+        dialogEntries.push({ node, number, disabled: item.disabled });
+      });
       panel.append(list);
     }
     panel.append(status);
     const actions = el('div', 'panel-actions');
-    for (const entry of model.actions) actions.append(button('secondary', entry.label, () => act(entry.action)));
-    panel.append(actions);
+    for (const entry of model.actions) {
+      const node = button('secondary', entry.label, () => act(entry.action));
+      actions.append(node);
+      dialogEntries.push({ node, disabled: false });
+    }
+    panel.append(actions, keyHint());
     dialog.replaceChildren(panel);
     panel.querySelector('button:not([disabled])')?.focus();
   }
+
+  function onMenuKey(event) {
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+    const entries = !title.hidden ? titleEntries : !dialog.hidden ? dialogEntries : null;
+    if (!entries) return;
+    const current = entries.findIndex(entry => entry.node === doc.activeElement);
+    const result = menuKey(event.code, current, entries);
+    if (!result) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (result.focus !== undefined) {
+      entries[result.focus].node.focus();
+      return;
+    }
+    if (event.repeat) return;
+    const target = entries[result.press].node;
+    target.click();
+    if (entries === titleEntries && target !== startButton) startButton.focus();
+  }
+  doc.addEventListener('keydown', onMenuKey);
 
   function renderHud(run) {
     const p = run.player;
@@ -363,9 +420,11 @@ export function mountUI(root, options) {
   }
 
   render();
+  cardButtons[WEAPON_ORDER.indexOf(selectedWeapon)].focus();
   return {
     render,
     dispose() {
+      doc.removeEventListener('keydown', onMenuKey);
       root.replaceChildren();
       hudCache.clear();
     }
