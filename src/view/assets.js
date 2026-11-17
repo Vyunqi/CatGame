@@ -1,3 +1,5 @@
+import { buildCatFrames } from './cat.js';
+
 const OUTLINE = '#22161a';
 
 const cake = inner => `..k${inner}k..`;
@@ -194,15 +196,6 @@ export const SPRITES = {
   }
 };
 
-export const CAT_CROPS = {
-  leap: { x: 532, y: 302, w: 153, h: 128 },
-  paw: { x: 711, y: 308, w: 129, h: 154 }
-};
-
-export function isBackdrop(r, g, b) {
-  return b > r + 24 && g > r + 12 && b > g + 8;
-}
-
 function makeCanvas(w, h) {
   const canvas = document.createElement('canvas');
   canvas.width = w;
@@ -223,56 +216,10 @@ function paintSprite({ rows, palette, scale }) {
   return canvas;
 }
 
-function clearEdgeBackdrop(imageData) {
-  const { width, height, data } = imageData;
-  const seen = new Uint8Array(width * height);
-  const stack = [];
-  const push = (x, y) => {
-    const i = y * width + x;
-    if (seen[i]) return;
-    seen[i] = 1;
-    const p = i * 4;
-    if (data[p + 3] === 0 || isBackdrop(data[p], data[p + 1], data[p + 2])) stack.push(i);
-  };
-  for (let x = 0; x < width; x++) { push(x, 0); push(x, height - 1); }
-  for (let y = 0; y < height; y++) { push(0, y); push(width - 1, y); }
-  while (stack.length > 0) {
-    const i = stack.pop();
-    data[i * 4 + 3] = 0;
-    const x = i % width;
-    const y = (i - x) / width;
-    if (x > 0) push(x - 1, y);
-    if (x < width - 1) push(x + 1, y);
-    if (y > 0) push(x, y - 1);
-    if (y < height - 1) push(x, y + 1);
-  }
-}
-
-function cropCat(image, { x, y, w, h }) {
-  const canvas = makeCanvas(w, h);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.drawImage(image, x, y, w, h, 0, 0, w, h);
-  const pixels = ctx.getImageData(0, 0, w, h);
-  clearEdgeBackdrop(pixels);
-  ctx.putImageData(pixels, 0, 0);
-  return canvas;
-}
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`无法载入素材：${src}`));
-    image.src = src;
-  });
-}
-
 export async function loadAssets() {
-  const reference = await loadImage('assets/reference.png');
   const sprites = {};
   for (const [name, sprite] of Object.entries(SPRITES)) sprites[name] = paintSprite(sprite);
-  return {
-    cats: { leap: cropCat(reference, CAT_CROPS.leap), paw: cropCat(reference, CAT_CROPS.paw) },
-    sprites
-  };
+  const cats = {};
+  for (const [clip, frames] of Object.entries(buildCatFrames())) cats[clip] = frames.map(paintSprite);
+  return { cats, sprites };
 }

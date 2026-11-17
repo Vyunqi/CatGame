@@ -6,6 +6,7 @@ export const MOTION = {
 };
 
 export const FALL_LINE = 700;
+export const LAND_DURATION = 0.14;
 
 export function createPlayer(spawn) {
   return {
@@ -13,7 +14,7 @@ export function createPlayer(spawn) {
     facing: 1, grounded: true, jumpsUsed: 0, maxJumps: 1,
     hp: 100, maxHp: 100, damageMultiplier: 1,
     invulnerableFor: 0, dashFor: 0, dashCooldownFor: 0,
-    coyoteFor: 0, jumpBufferFor: 0, safe: { x: spawn.x, y: spawn.y }
+    coyoteFor: 0, jumpBufferFor: 0, landFor: 0, hurtFor: 0, safe: { x: spawn.x, y: spawn.y }
   };
 }
 
@@ -32,6 +33,8 @@ export function stepPlayer(player, input, platforms, dt) {
   player.dashCooldownFor = tick(player.dashCooldownFor, dt);
   player.coyoteFor = tick(player.coyoteFor, dt);
   player.jumpBufferFor = tick(player.jumpBufferFor, dt);
+  player.landFor = tick(player.landFor, dt);
+  player.hurtFor = tick(player.hurtFor, dt);
   const wasDashing = player.dashFor > 0;
   player.dashFor = tick(player.dashFor, dt);
 
@@ -119,6 +122,7 @@ function moveVertical(player, platforms, dt) {
     player.vy = 0;
     player.grounded = true;
     player.jumpsUsed = 0;
+    if (!wasGrounded) player.landFor = LAND_DURATION;
     if (isSolid(landing) && player.x >= landing.x && player.x + player.w <= landing.x + landing.w) {
       player.safe = { x: player.x, y: player.y };
     }

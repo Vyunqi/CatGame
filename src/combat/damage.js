@@ -72,6 +72,7 @@ export function damagePlayer(run, amount, { ignoreInvulnerability = false } = {}
   if (!ignoreInvulnerability && player.invulnerableFor > 0) return false;
   player.hp = Math.max(0, player.hp - amount);
   player.invulnerableFor = PLAYER_INVULNERABILITY;
+  player.hurtFor = 0.22;
   pushNumber(run, player, amount, '#ff6b5e');
   run.shake = 0.18;
   if (player.hp <= 0) {

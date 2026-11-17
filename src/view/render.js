@@ -1,5 +1,7 @@
+import { catPose } from './cat.js';
+import { LAND_DURATION } from '../world/physics.js';
+
 export const VIEW = { width: 960, height: 540 };
-const CAT_HEIGHT = 64;
 
 const THEMES = {
   grass: {
@@ -18,6 +20,20 @@ const THEMES = {
 
 export function cameraFor(player, room) {
   return { x: Math.max(0, Math.min(room.width - VIEW.width, player.x + player.w / 2 - 360)), y: 0 };
+}
+
+export function groundShadow(player, room) {
+  const feet = player.y + player.h;
+  const cx = player.x + player.w / 2;
+  let ground = null;
+  for (const p of room.platforms) {
+    if (p.y < feet - 1 || cx < p.x || cx > p.x + p.w) continue;
+    if (ground === null || p.y < ground) ground = p.y;
+  }
+  if (ground === null) return null;
+  const t = 1 - (ground - feet) / 260;
+  if (t <= 0) return null;
+  return { y: ground, alpha: 0.3 * t, width: 40 * (0.5 + 0.5 * t) };
 }
 
 function hash(a, b) {
@@ -262,15 +278,32 @@ function drawEnemy(ctx, enemy, assets, camX, t) {
   }
 }
 
-function catPose(player) {
-  if (!player.grounded || Math.abs(player.vx) > 20) return 'leap';
-  return 'paw';
+function drawCat(ctx, assets, x, feetY, facing, pose, alpha = 1) {
+  const image = assets.cats[pose.clip][pose.frame];
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.translate(Math.round(x), Math.round(feetY + (pose.dy || 0)));
+  ctx.scale(facing * (pose.sx || 1), pose.sy || 1);
+  ctx.drawImage(image, -image.width / 2, -image.height);
+  ctx.restore();
 }
 
-function drawCat(ctx, assets, x, feetY, facing, pose, alpha = 1) {
-  const image = assets.cats[pose];
-  const scale = CAT_HEIGHT / image.height;
-  drawSprite(ctx, image, x, feetY - CAT_HEIGHT / 2, { flip: facing < 0, alpha, scale });
+function drawDust(ctx, run, cx, feet, t) {
+  const player = run.player;
+  const puff = (x, y, size, alpha) => {
+    ctx.fillStyle = `rgba(240, 230, 210, ${alpha})`;
+    ctx.fillRect(Math.round(x - size / 2), Math.round(y - size / 2), Math.round(size), Math.round(size));
+  };
+  if (player.grounded && Math.abs(player.vx) > 20 && player.dashFor <= 0) {
+    for (let i = 0; i < 2; i++) {
+      const p = (t * 6 + i * 0.5) % 1;
+      puff(cx - player.facing * (10 + p * 16), feet - 2 - p * 6, 2 + p * 4, (1 - p) * 0.45);
+    }
+  }
+  if (player.landFor > 0) {
+    const p = 1 - player.landFor / LAND_DURATION;
+    for (const side of [-1, 1]) puff(cx + side * (8 + p * 20), feet - 2 - p * 5, 3 + p * 4, (1 - p) * 0.6);
+  }
 }
 
 function activeMelee(run) {
@@ -283,7 +316,7 @@ function drawHeldWeapon(ctx, run, assets, camX) {
   const image = assets.sprites[weapon.id];
   const facing = player.facing;
   const hx = player.x + player.w / 2 - camX + facing * 18;
-  const hy = player.y + player.h / 2 + 4;
+  const hy = player.y + player.h - 30;
   if (weapon.id === 'sword') {
     const swing = activeMelee(run);
     let angle = -0.9;
@@ -307,17 +340,19 @@ function drawPlayer(ctx, run, assets, camX, t) {
   const player = run.player;
   const cx = player.x + player.w / 2 - camX;
   const feet = player.y + player.h;
-  const pose = catPose(player);
-  const moving = player.grounded && Math.abs(player.vx) > 20;
-  const bob = moving ? Math.round(Math.sin(t * 18) * 2) : 0;
+  const pose = catPose(run);
   if (player.dashFor > 0) {
-    drawCat(ctx, assets, cx - player.facing * 22, feet, player.facing, 'leap', 0.25);
-    drawCat(ctx, assets, cx - player.facing * 11, feet, player.facing, 'leap', 0.45);
+    drawCat(ctx, assets, cx - player.facing * 24, feet, player.facing, pose, 0.22);
+    drawCat(ctx, assets, cx - player.facing * 12, feet, player.facing, pose, 0.42);
   }
-  const flicker = player.invulnerableFor > 0 && Math.floor(t * 20) % 2 === 0;
-  ctx.fillStyle = 'rgba(20, 14, 24, 0.3)';
-  ctx.fillRect(Math.round(cx - 18), Math.round(feet - 3), 36, 4);
-  drawCat(ctx, assets, cx, feet + bob, player.facing, pose, flicker ? 0.4 : 1);
+  const flicker = player.invulnerableFor > 0 && player.hurtFor <= 0 && Math.floor(t * 20) % 2 === 0;
+  const shadow = groundShadow(player, run.room);
+  if (shadow) {
+    ctx.fillStyle = `rgba(20, 14, 24, ${shadow.alpha.toFixed(3)})`;
+    ctx.fillRect(Math.round(cx - shadow.width / 2), Math.round(shadow.y - 3), Math.round(shadow.width), 4);
+  }
+  drawDust(ctx, run, cx, feet, t);
+  drawCat(ctx, assets, cx, feet, player.facing, pose, flicker ? 0.4 : 1);
   drawHeldWeapon(ctx, run, assets, camX);
 }
 
@@ -476,7 +511,7 @@ function drawTitleScene(ctx, assets, t) {
   drawFar(ctx, theme, 'grass', t * 20);
   drawMid(ctx, theme, t * 20);
   drawPlatform(ctx, { x: 0, y: 440, w: VIEW.width, h: 100 }, theme, 'grass', 0);
-  drawCat(ctx, assets, 250, 440 + Math.round(Math.sin(t * 3) * 2), 1, 'paw');
+  drawCat(ctx, assets, 250, 440, 1, { clip: 'idle', frame: Math.floor(t * 2) % 4, sx: 1, sy: 1, dy: 0 });
   ctx.save();
   ctx.translate(560, 300);
   ctx.scale(1.4, 1.4);
