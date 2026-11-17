@@ -1,4 +1,4 @@
-import { buildCatFrames } from './cat.js';
+import { CAT_CROPS } from './cat.js';
 
 const OUTLINE = '#22161a';
 
@@ -216,10 +216,21 @@ function paintSprite({ rows, palette, scale }) {
   return canvas;
 }
 
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`failed to load ${src}`));
+    image.src = src;
+  });
+}
+
 export async function loadAssets() {
   const sprites = {};
   for (const [name, sprite] of Object.entries(SPRITES)) sprites[name] = paintSprite(sprite);
   const cats = {};
-  for (const [clip, frames] of Object.entries(buildCatFrames())) cats[clip] = frames.map(paintSprite);
+  await Promise.all(Object.keys(CAT_CROPS).map(async name => {
+    cats[name] = await loadImage(`assets/cat-${name}.png`);
+  }));
   return { cats, sprites };
 }

@@ -1,4 +1,4 @@
-import { catPose } from './cat.js';
+import { catPose, CAT_CLIPS, CAT_CROPS } from './cat.js';
 import { LAND_DURATION } from '../world/physics.js';
 
 export const VIEW = { width: 960, height: 540 };
@@ -279,12 +279,18 @@ function drawEnemy(ctx, enemy, assets, camX, t) {
 }
 
 function drawCat(ctx, assets, x, feetY, facing, pose, alpha = 1) {
-  const image = assets.cats[pose.clip][pose.frame];
+  const spec = CAT_CLIPS[pose.clip][pose.frame];
+  const image = assets.cats[spec.crop];
+  const scale = CAT_CROPS[spec.crop].drawH / image.height;
+  const w = image.width * scale;
+  const h = image.height * scale;
+  const rotate = pose.rotate || 0;
   ctx.save();
   ctx.globalAlpha *= alpha;
-  ctx.translate(Math.round(x), Math.round(feetY + (pose.dy || 0)));
+  ctx.translate(Math.round(x), Math.round(feetY + (pose.dy || 0) - (rotate ? w / 2 : 0)));
+  if (rotate) ctx.rotate(rotate);
   ctx.scale(facing * (pose.sx || 1), pose.sy || 1);
-  ctx.drawImage(image, -image.width / 2, -image.height);
+  ctx.drawImage(image, -w / 2, rotate ? -h / 2 : -h, w, h);
   ctx.restore();
 }
 
@@ -310,13 +316,15 @@ function activeMelee(run) {
   return run.attacks.find(a => a.kind === 'melee' && a.owner === 'player');
 }
 
-function drawHeldWeapon(ctx, run, assets, camX) {
+export function drawHeldWeapon(ctx, run, assets, camX, alpha = 1) {
   const player = run.player;
   const weapon = run.weapons[run.activeWeapon];
   const image = assets.sprites[weapon.id];
   const facing = player.facing;
   const hx = player.x + player.w / 2 - camX + facing * 18;
-  const hy = player.y + player.h - 30;
+  const hy = player.y + player.h - 26;
+  ctx.save();
+  ctx.globalAlpha = alpha;
   if (weapon.id === 'sword') {
     const swing = activeMelee(run);
     let angle = -0.9;
@@ -330,10 +338,12 @@ function drawHeldWeapon(ctx, run, assets, camX) {
     ctx.rotate(angle);
     ctx.drawImage(image, -6, -image.height / 2);
     ctx.restore();
+    ctx.restore();
     return;
   }
   const recoil = weapon.readyAt - run.time > 0 && weapon.readyAt - run.time > 0.25 ? -3 : 0;
   drawSprite(ctx, image, hx + facing * (6 + recoil), hy, { flip: facing < 0 && weapon.id !== 'icecream' });
+  ctx.restore();
 }
 
 function drawPlayer(ctx, run, assets, camX, t) {
@@ -353,7 +363,7 @@ function drawPlayer(ctx, run, assets, camX, t) {
   }
   drawDust(ctx, run, cx, feet, t);
   drawCat(ctx, assets, cx, feet, player.facing, pose, flicker ? 0.4 : 1);
-  drawHeldWeapon(ctx, run, assets, camX);
+  drawHeldWeapon(ctx, run, assets, camX, flicker ? 0.4 : 1);
 }
 
 function drawMeleeArc(ctx, attack, camX) {
@@ -511,7 +521,7 @@ function drawTitleScene(ctx, assets, t) {
   drawFar(ctx, theme, 'grass', t * 20);
   drawMid(ctx, theme, t * 20);
   drawPlatform(ctx, { x: 0, y: 440, w: VIEW.width, h: 100 }, theme, 'grass', 0);
-  drawCat(ctx, assets, 250, 440, 1, { clip: 'idle', frame: Math.floor(t * 2) % 4, sx: 1, sy: 1, dy: 0 });
+  drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 4, sx: 1, sy: 1, dy: 0, rotate: 0 });
   ctx.save();
   ctx.translate(560, 300);
   ctx.scale(1.4, 1.4);
