@@ -1,38 +1,28 @@
 import { getWeaponStats, WEAPONS } from '../combat/catalog.js';
-import { LAND_DURATION } from '../world/physics.js';
+import { LAND_DURATION, MOTION } from '../world/physics.js';
+import { CAT_FRAME_META } from './catFrameMeta.js';
 
-// Source rects into assets/reference.png (1024x1024). Masks erase the branded
-// ice cream so published crops carry no commercial logo and paws stay empty
-// for the held-weapon overlay.
-export const CAT_CROPS = {
-  walk1: { x: 338, y: 78, w: 142, h: 190, drawH: 74, masks: [[10, 0, 48, 88]] },
-  walk2: { x: 498, y: 78, w: 142, h: 190, drawH: 74, masks: [[10, 0, 48, 88]] },
-  walk3: { x: 658, y: 78, w: 142, h: 190, drawH: 74, masks: [[30, 2, 40, 42], [34, 40, 13, 20], [46, 40, 20, 40], [37, 60, 3, 20]] },
-  walk4: { x: 828, y: 78, w: 142, h: 190, drawH: 74, masks: [[36, 4, 38, 38], [36, 42, 36, 20], [51, 62, 19, 20], [41, 62, 4, 20]] },
-  runA: { x: 352, y: 318, w: 132, h: 148, drawH: 60, masks: [[102, 55, 30, 58]] },
-  runB: { x: 178, y: 828, w: 152, h: 128, drawH: 56, masks: [[110, 36, 42, 64]] },
-  leap: { x: 518, y: 296, w: 168, h: 158, drawH: 66, masks: [] },
-  kick: { x: 698, y: 296, w: 138, h: 168, drawH: 66, masks: [] },
-  hurt: { x: 838, y: 292, w: 152, h: 172, drawH: 64, masks: [] },
-  throw: { x: 458, y: 494, w: 262, h: 132, drawH: 58, masks: [[150, 8, 112, 66]] },
-  dash: { x: 718, y: 504, w: 168, h: 118, drawH: 52, masks: [[0, 24, 16, 44]] }
-};
-
+// Each spec indexes one of the 35 normalized drawings in assets/cat-frames/.
+// sx/sy/dy/rotate are per-pose squash, offset and spin applied at draw time.
 export const CAT_CLIPS = {
-  walk: [{ crop: 'walk1' }, { crop: 'walk2' }, { crop: 'walk3' }, { crop: 'walk4' }],
-  idle: [{ crop: 'walk2' }, { crop: 'walk2', sy: 1.03, dy: -1 }, { crop: 'walk2' }, { crop: 'walk2', sy: 0.97 }],
-  run: [{ crop: 'runB' }, { crop: 'runA', dy: -2 }, { crop: 'dash', dy: -1, sx: 1.05, sy: 0.95 }],
-  jump: [{ crop: 'leap', sx: 0.96, sy: 1.06 }],
-  fall: [{ crop: 'kick' }],
-  land: [{ crop: 'runB', sx: 1.15, sy: 0.8 }, { crop: 'runB', sx: 1.06, sy: 0.92 }],
-  dash: [{ crop: 'dash', sx: 1.22, sy: 0.85 }],
-  sword: [{ crop: 'runB', sx: 1.06, sy: 0.9 }, { crop: 'throw' }, { crop: 'runA' }],
-  throw: [{ crop: 'runB', sx: 1.04, sy: 0.94 }, { crop: 'throw' }],
-  hurt: [{ crop: 'hurt' }],
-  dead: [{ crop: 'hurt', rotate: Math.PI / 2 }]
+  walk: [{ f: 6 }, { f: 7 }, { f: 8 }, { f: 9 }, { f: 10 }, { f: 11 }, { f: 12 }, { f: 13 }],
+  idle: [{ f: 0 }, { f: 1 }, { f: 2 }, { f: 3 }, { f: 4 }, { f: 5 }],
+  run: [{ f: 6 }, { f: 7 }, { f: 8 }, { f: 9 }, { f: 10 }, { f: 11 }, { f: 12 }, { f: 13 }],
+  jump: [{ f: 16 }, { f: 17 }],
+  fall: [{ f: 18, sy: 1.06 }],
+  land: [{ f: 19, sx: 1.12, sy: 0.82 }, { f: 20, sx: 1.05, sy: 0.92 }],
+  dash: [{ f: 21 }, { f: 22 }, { f: 23 }, { f: 24 }, { f: 25 }, { f: 26 }, { f: 27 }],
+  sword: [{ f: 21 }, { f: 26 }, { f: 27 }],
+  throw: [{ f: 6 }, { f: 26 }],
+  hurt: [{ f: 19, sx: 1.06, sy: 0.9 }],
+  dead: [{ f: 0, rotate: Math.PI / 2 }]
 };
 
-const RUN_STRIDE = 28;
+// On-screen size of the normalized canvas; baseline row lands on the feet line.
+export const CAT_SCALE = 1.2;
+export const CAT_BASE = CAT_FRAME_META.base;
+
+const RUN_STRIDE = 10;
 
 function pose(clip, frame) {
   return { clip, frame, sx: 1, sy: 1, dy: 0, rotate: 0, ...CAT_CLIPS[clip][frame] };
@@ -42,7 +32,10 @@ export function catPose(run) {
   const player = run.player;
   if (run.state === 'dead') return pose('dead', 0);
   if (player.hurtFor > 0) return pose('hurt', 0);
-  if (player.dashFor > 0) return pose('dash', 0);
+  if (player.dashFor > 0) {
+    const progress = 1 - player.dashFor / MOTION.dashDuration;
+    return pose('dash', Math.max(0, Math.min(CAT_CLIPS.dash.length - 1, Math.floor(progress * CAT_CLIPS.dash.length))));
+  }
   const melee = run.attacks.find(a => a.kind === 'melee' && a.owner === 'player');
   if (melee) return pose('sword', melee.age < melee.windup ? 0 : melee.age <= melee.activeUntil ? 1 : 2);
   const weapon = run.weapons[run.activeWeapon];
@@ -51,10 +44,10 @@ export function catPose(run) {
     if (sinceShot >= 0 && sinceShot < 0.16) return pose('throw', sinceShot < 0.06 ? 0 : 1);
   }
   if (player.grounded && player.landFor > 0) return pose('land', player.landFor > LAND_DURATION / 2 ? 0 : 1);
-  if (!player.grounded) return pose(player.vy < 0 ? 'jump' : 'fall', 0);
+  if (!player.grounded) return pose(player.vy < 0 ? 'jump' : 'fall', player.vy < -120 ? 0 : player.vy < 0 ? 1 : 0);
   if (Math.abs(player.vx) > 20) {
-    const frame = ((Math.floor((player.x * player.facing) / RUN_STRIDE) % 3) + 3) % 3;
+    const frame = ((Math.floor((player.x * player.facing) / RUN_STRIDE) % 8) + 8) % 8;
     return pose('run', frame);
   }
-  return pose('idle', Math.floor(run.time * 2) % 4);
+  return pose('idle', Math.floor(run.time * 6) % 6);
 }

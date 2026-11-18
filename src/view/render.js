@@ -1,4 +1,4 @@
-import { catPose, CAT_CLIPS, CAT_CROPS } from './cat.js';
+import { catPose, CAT_CLIPS, CAT_SCALE, CAT_BASE } from './cat.js';
 import { LAND_DURATION } from '../world/physics.js';
 
 export const VIEW = { width: 960, height: 540 };
@@ -280,17 +280,18 @@ function drawEnemy(ctx, enemy, assets, camX, t) {
 
 function drawCat(ctx, assets, x, feetY, facing, pose, alpha = 1) {
   const spec = CAT_CLIPS[pose.clip][pose.frame];
-  const image = assets.cats[spec.crop];
-  const scale = CAT_CROPS[spec.crop].drawH / image.height;
-  const w = image.width * scale;
-  const h = image.height * scale;
+  const image = assets.catFrames[spec.f];
+  const w = image.width * CAT_SCALE;
+  const h = image.height * CAT_SCALE;
+  const base = CAT_BASE * CAT_SCALE;
   const rotate = pose.rotate || 0;
   ctx.save();
   ctx.globalAlpha *= alpha;
+  ctx.imageSmoothingEnabled = false;
   ctx.translate(Math.round(x), Math.round(feetY + (pose.dy || 0) - (rotate ? w / 2 : 0)));
   if (rotate) ctx.rotate(rotate);
   ctx.scale(facing * (pose.sx || 1), pose.sy || 1);
-  ctx.drawImage(image, -w / 2, rotate ? -h / 2 : -h, w, h);
+  ctx.drawImage(image, -w / 2, rotate ? -h / 2 : -base, w, h);
   ctx.restore();
 }
 
@@ -521,7 +522,7 @@ function drawTitleScene(ctx, assets, t) {
   drawFar(ctx, theme, 'grass', t * 20);
   drawMid(ctx, theme, t * 20);
   drawPlatform(ctx, { x: 0, y: 440, w: VIEW.width, h: 100 }, theme, 'grass', 0);
-  drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 4, sx: 1, sy: 1, dy: 0, rotate: 0 });
+  drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 8, sx: 1, sy: 1, dy: 0, rotate: 0 });
   ctx.save();
   ctx.translate(560, 300);
   ctx.scale(1.4, 1.4);

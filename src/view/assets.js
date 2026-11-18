@@ -1,5 +1,3 @@
-import { CAT_CROPS } from './cat.js';
-
 const OUTLINE = '#22161a';
 
 const cake = inner => `..k${inner}k..`;
@@ -228,9 +226,8 @@ function loadImage(src) {
 export async function loadAssets() {
   const sprites = {};
   for (const [name, sprite] of Object.entries(SPRITES)) sprites[name] = paintSprite(sprite);
-  const cats = {};
-  await Promise.all(Object.keys(CAT_CROPS).map(async name => {
-    cats[name] = await loadImage(`assets/cat-${name}.png`);
-  }));
-  return { cats, sprites };
+  const catFrames = await Promise.all(
+    Array.from({ length: 35 }, (_, i) => loadImage(`assets/cat-frames/f${String(i).padStart(2, '0')}.png`)),
+  );
+  return { catFrames, sprites };
 }
