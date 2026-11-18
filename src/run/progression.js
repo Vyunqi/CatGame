@@ -10,7 +10,7 @@ export const ZONE_HP = [1, 1.25, 1.5];
 const HEAL_AMOUNT = 30;
 const MAX_HP_BONUS = 20;
 const DAMAGE_BONUS = 1.12;
-const CHEST_ORDER = ['icecream', 'crossbow', 'yarn', 'sword'];
+const CHEST_ORDER = ['icecream', 'crossbow', 'yarn', 'sword', 'hammer', 'laser', 'bomb'];
 
 const fail = reason => ({ ok: false, reason });
 
@@ -44,7 +44,13 @@ function availableModules(run) {
 
 export function makeRewards(run) {
   const offers = [STAT_OFFERS[run.rng() < 0.5 ? 'maxHp' : 'damage']()];
-  const pool = availableModules(run).map(id => () => moduleOffer(id));
+  const moduleIds = availableModules(run);
+  const pool = moduleIds.map(id => () => moduleOffer(id));
+  if (moduleIds.length > 0) {
+    const index = Math.floor(run.rng() * moduleIds.length);
+    offers.push(moduleOffer(moduleIds[index]));
+    pool.splice(index, 1);
+  }
   for (const kind of ['maxHp', 'damage']) {
     if (kind !== offers[0].kind) pool.push(STAT_OFFERS[kind]);
   }
@@ -61,7 +67,7 @@ export function makeShop(run) {
   const weapons = Object.keys(WEAPONS).filter(id => !run.weapons.some(w => w.id === id));
   if (weapons.length > 0) offers.push(weaponOffer(pickOne(run, weapons), PRICES.weapon));
   const modules = availableModules(run);
-  for (let i = 0; i < 2 && modules.length > 0; i++) {
+  for (let i = 0; i < 3 && modules.length > 0; i++) {
     const index = Math.floor(run.rng() * modules.length);
     offers.push(moduleOffer(modules.splice(index, 1)[0], PRICES.module));
   }

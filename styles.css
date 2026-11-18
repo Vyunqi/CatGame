@@ -307,6 +307,9 @@ kbd {
 .weapon-card[data-weapon="crossbow"] .card-icon { background: #9ad8ff; }
 .weapon-card[data-weapon="yarn"] .card-icon { background: #c88cff; }
 .weapon-card[data-weapon="sword"] .card-icon { background: #e8e8f0; }
+.weapon-card[data-weapon="hammer"] .card-icon { background: #f2c14e; }
+.weapon-card[data-weapon="laser"] .card-icon { background: #ff5a4a; }
+.weapon-card[data-weapon="bomb"] .card-icon { background: #8fd8a0; }
 
 .choice-list {
   display: flex;
@@ -383,3 +386,19 @@ kbd {
 
 .primary:hover,
 .secondary:hover { filter: brightness(1.15); }
+
+.panel {
+  scrollbar-width: thin;
+  scrollbar-color: #4a4766 #1a1926;
+}
+.panel::-webkit-scrollbar { width: 10px; }
+.panel::-webkit-scrollbar-track { background: #1a1926; }
+.panel::-webkit-scrollbar-thumb { background: #4a4766; border: 2px solid #1a1926; }
+.panel::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+@media (max-width: 700px) {
+  .stage { container-type: normal; }
+  .ui { font-size: clamp(10px, 2.8vw, 14px); }
+  .screen { position: fixed; inset: 0; z-index: 40; padding: 12px; }
+  .panel { max-height: calc(100vh - 24px); }
+}

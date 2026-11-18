@@ -1,5 +1,6 @@
 import { catPose, CAT_CLIPS, CAT_SCALE, CAT_BASE } from './cat.js';
 import { LAND_DURATION } from '../world/physics.js';
+import { WEAPONS } from '../combat/catalog.js';
 
 export const VIEW = { width: 960, height: 540 };
 
@@ -326,7 +327,7 @@ export function drawHeldWeapon(ctx, run, assets, camX, alpha = 1) {
   const hy = player.y + player.h - 26;
   ctx.save();
   ctx.globalAlpha = alpha;
-  if (weapon.id === 'sword') {
+  if (WEAPONS[weapon.id].kind === 'melee') {
     const swing = activeMelee(run);
     let angle = -0.9;
     if (swing) {
@@ -446,6 +447,17 @@ function drawProjectile(ctx, attack, assets, camX) {
   } else if (attack.weapon === 'yarn') {
     ctx.rotate(attack.age * 10);
     ctx.drawImage(assets.sprites.yarn, -10, -10);
+  } else if (attack.weapon === 'laser') {
+    ctx.rotate(angle);
+    ctx.fillStyle = 'rgba(255, 90, 74, 0.45)';
+    ctx.fillRect(-14, -4, 28, 8);
+    ctx.fillStyle = '#ff5a4a';
+    ctx.fillRect(-12, -2, 24, 4);
+    ctx.fillStyle = '#ffd0c8';
+    ctx.fillRect(-10, -1, 20, 2);
+  } else if (attack.weapon === 'bomb') {
+    ctx.rotate(attack.age * 6);
+    ctx.drawImage(assets.sprites.bomb, -12, -12);
   } else {
     ctx.rotate(angle);
     ctx.fillStyle = '#22161a';

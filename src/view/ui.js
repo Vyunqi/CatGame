@@ -2,7 +2,7 @@ import { WEAPONS, MODULES, getWeaponStats } from '../combat/catalog.js';
 import { isCompatible, MAX_WEAPONS, MAX_MODULES } from '../combat/loadout.js';
 import { zoneOf, BOSS_ROOM } from '../world/rooms.js';
 
-export const WEAPON_ORDER = ['icecream', 'crossbow', 'yarn', 'sword'];
+export const WEAPON_ORDER = ['icecream', 'crossbow', 'yarn', 'sword', 'hammer', 'laser', 'bomb'];
 const ZONE_NAMES = ['糖霜草原', '黄昏林地', '蛋糕城堡'];
 
 const REASONS = {

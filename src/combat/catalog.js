@@ -18,6 +18,21 @@ export const WEAPONS = {
     name: '长剑', kind: 'melee', damage: 24, cooldown: 0.44, reach: 76,
     windup: 0.05, activeUntil: 0.16, knockback: 260,
     description: '前方弧形挥砍，每次挥砍对同一敌人只结算一次，带击退。'
+  },
+  hammer: {
+    name: '猫爪重锤', kind: 'melee', damage: 40, cooldown: 0.9, reach: 92,
+    windup: 0.12, activeUntil: 0.26, knockback: 420,
+    description: '缓慢沉重的砸击，范围大、击退强。'
+  },
+  laser: {
+    name: '逗猫激光笔', kind: 'projectile', damage: 7, speed: 1100, cooldown: 0.16, pierce: 2,
+    radius: 5, ttl: 0.6,
+    description: '高射速激光点，可穿透多个敌人。'
+  },
+  bomb: {
+    name: '鱼干炸弹', kind: 'projectile', damage: 30, speed: 300, cooldown: 1, gravity: 900, blastRadius: 130,
+    radius: 12, ttl: 2.4, lift: -320,
+    description: '高抛鱼干炸弹，落点大范围爆炸。'
   }
 };
 
@@ -30,11 +45,24 @@ export const MODULES = {
   frost: { name: '冰冻', compatible: ['icecream', 'crossbow', 'yarn', 'sword'], description: '命中减速，连续三次冻结敌人；Boss 只减速。' },
   combo: { name: '连斩', compatible: ['sword'], description: '连续挥砍形成三段斩击，第三段更强并大幅击退。' },
   swordwave: { name: '剑气', compatible: ['sword'], description: '挥砍时同时放出一道向前飞行的剑气。' },
-  leech: { name: '吸血', compatible: ['icecream', 'crossbow', 'yarn', 'sword'], description: '按造成伤害的 8% 回复生命。' }
+  leech: { name: '吸血', compatible: ['icecream', 'crossbow', 'yarn', 'sword'], description: '按造成伤害的 8% 回复生命。' },
+  pierce: { name: '穿透', compatible: ['icecream', 'crossbow', 'laser'], description: '弹丸额外穿透两个敌人。' },
+  blast: { name: '爆弹', compatible: ['icecream', 'crossbow', 'laser'], description: '命中时产生小范围爆炸。' },
+  crit: { name: '会心', compatible: ['icecream', 'crossbow', 'yarn', 'sword', 'hammer', 'laser', 'bomb'], description: '20% 概率造成双倍伤害。' },
+  knock: { name: '冲击', compatible: ['icecream', 'crossbow', 'yarn', 'sword', 'hammer', 'laser', 'bomb'], description: '命中时击退敌人。' },
+  swift: { name: '迅捷', compatible: ['sword', 'hammer'], description: '挥砍间隔缩短 30%。' },
+  wide: { name: '广域', compatible: ['sword', 'hammer'], description: '挥砍范围扩大 30%。' }
 };
 
 export const SCATTER_ANGLES = [-0.18, 0, 0.18];
 export const COMBO_WINDOW = 0.8;
+export const CRIT_CHANCE = 0.2;
+export const CRIT_MULT = 2;
+export const BLAST_RADIUS = 70;
+export const KNOCKBACK = 220;
+export const PIERCE_BONUS = 2;
+export const SWIFT_COOLDOWN = 0.7;
+export const WIDE_REACH = 1.3;
 
 export function createWeapon(id) {
   return { id, modules: [], readyAt: 0, combo: 0, lastSwingAt: -Infinity };
@@ -47,9 +75,11 @@ export function getWeaponStats(weapon, damageMultiplier = 1) {
   return {
     ...base,
     damage: base.damage * (scatter ? 0.55 : 1) * damageMultiplier,
-    cooldown: base.cooldown * (has('rapid') ? 0.65 : 1),
+    cooldown: base.cooldown * (has('rapid') ? 0.65 : 1) * (has('swift') ? SWIFT_COOLDOWN : 1),
     angles: scatter ? SCATTER_ANGLES : [0],
-    pierce: base.pierce ?? 0,
+    pierce: (base.pierce ?? 0) + (has('pierce') ? PIERCE_BONUS : 0),
+    blastRadius: base.blastRadius ?? (has('blast') ? BLAST_RADIUS : 0),
+    reach: base.reach === undefined ? undefined : base.reach * (has('wide') ? WIDE_REACH : 1),
     bounces: has('bounce') ? 2 : 0,
     turnRate: has('homing') ? 3 : 0
   };

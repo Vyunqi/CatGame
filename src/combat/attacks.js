@@ -1,4 +1,4 @@
-import { getWeaponStats, COMBO_WINDOW } from './catalog.js';
+import { getWeaponStats, COMBO_WINDOW, KNOCKBACK } from './catalog.js';
 import { resolveHit, damagePlayer } from './damage.js';
 
 const SWORDWAVE = { speed: 560, ttl: 0.7, radius: 18, damageRatio: 0.6, pierce: 2 };
@@ -29,7 +29,7 @@ export function beginAttack(weapon, player, now, nextId) {
       x: cx, y: cy, vx: 0, vy: 0, age: 0, ttl: stats.cooldown,
       windup: stats.windup, activeUntil: stats.activeUntil,
       damage, radius: stats.reach, facing, stage,
-      arc: modules.includes('combo') ? COMBO_ARCS[stage] : [-1.1, 0.9],
+      arc: modules.includes('combo') ? COMBO_ARCS[stage] : (modules.includes('wide') ? [-1.4, 1.2] : [-1.1, 0.9]),
       knockback: stats.knockback * (stage === 3 ? 1.8 : 1),
       hitIds: new Set(), modules, pierceLeft: 0, bouncesLeft: 0
     }];
@@ -53,7 +53,8 @@ export function beginAttack(weapon, player, now, nextId) {
     age: 0, ttl: stats.ttl, damage: stats.damage, radius: stats.radius, facing,
     hitIds: new Set(), modules, pierceLeft: stats.pierce, bouncesLeft: stats.bounces,
     gravity: stats.gravity ?? 0, blastRadius: stats.blastRadius ?? 0, turnRate: stats.turnRate,
-    slowOnHit: stats.slowOnHit ?? 0
+    slowOnHit: stats.slowOnHit ?? 0,
+    knockback: modules.includes('knock') ? KNOCKBACK : 0
   }));
 }
 

@@ -1,3 +1,5 @@
+import { CRIT_CHANCE, CRIT_MULT } from './catalog.js';
+
 export const BURN = { duration: 2, interval: 0.4, damage: 2 };
 export const FROST = { slow: 1.2, hitsToFreeze: 3, freeze: 0.7 };
 export const LEECH_RATIO = 0.08;
@@ -17,10 +19,12 @@ function pushNumber(run, target, value, color) {
 export function resolveHit(attack, target, run, kind = 'direct') {
   if (target.hp <= 0 || attack.hitIds.has(target.id)) return 0;
   attack.hitIds.add(target.id);
-  const dealt = Math.min(target.hp, attack.damage);
+  const isCrit = attack.modules.includes('crit') && run.rng() < CRIT_CHANCE;
+  const damage = attack.damage * (isCrit ? CRIT_MULT : 1);
+  const dealt = Math.min(target.hp, damage);
   target.hp -= dealt;
   target.hurtFor = 0.12;
-  if (dealt > 0) pushNumber(run, target, dealt, '#fff6d0');
+  if (dealt > 0) pushNumber(run, target, dealt, isCrit ? '#ffd84a' : '#fff6d0');
   if (kind !== 'direct') return dealt;
 
   const statuses = target.statuses;

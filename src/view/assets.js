@@ -158,6 +158,44 @@ export const SPRITES = {
       '...k..............'
     ]
   },
+  hammer: {
+    scale: 2,
+    palette: { k: OUTLINE, g: '#6a3a1e', h: '#c9ccd6', p: '#ff8fb8' },
+    rows: [
+      '..........kkkkkk..',
+      '.........khhhhhhk.',
+      'kggggggggkhpppphk.',
+      'kggggggggkhpppphk.',
+      '.........khhhhhhk.',
+      '..........kkkkkk..'
+    ]
+  },
+  laser: {
+    scale: 2,
+    palette: { k: OUTLINE, s: '#e8e8f0', r: '#ff5a4a', R: '#c03028', h: '#ffd0c8' },
+    rows: [
+      'kkkkkkkkkkkkk...',
+      'kssssssssrrRhk..',
+      'kssssssssrrRhk..',
+      'kkkkkkkkkkkkk...'
+    ]
+  },
+  bomb: {
+    scale: 2,
+    palette: { k: OUTLINE, G: '#5a6a72', g: '#8fd8a0', y: '#ffd23f' },
+    rows: [
+      '....kk....',
+      '...kyyk...',
+      '....kk....',
+      '..kkkkkk..',
+      '.kGGGGGGk.',
+      'kGGgGGgGGk',
+      'kGgGGgGGGk',
+      'kGGGGGGGGk',
+      '.kGGGGGGk.',
+      '..kkkkkk..'
+    ]
+  },
   coin: {
     scale: 2,
     palette: { k: OUTLINE, y: '#ffd23f', h: '#fff3a0', Y: '#c8961a' },
