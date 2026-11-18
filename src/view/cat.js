@@ -1,5 +1,5 @@
 import { getWeaponStats, WEAPONS } from '../combat/catalog.js';
-import { LAND_DURATION, MOTION } from '../world/physics.js';
+import { LAND_DURATION, DASH_ANIM_DURATION } from '../world/physics.js';
 import { CAT_FRAME_META } from './catFrameMeta.js';
 
 // Each spec indexes one of the 35 normalized drawings in assets/cat-frames/.
@@ -28,14 +28,16 @@ function pose(clip, frame) {
   return { clip, frame, sx: 1, sy: 1, dy: 0, rotate: 0, ...CAT_CLIPS[clip][frame] };
 }
 
+function dashPose(player) {
+  const progress = 1 - player.dashAnimFor / DASH_ANIM_DURATION;
+  return pose('dash', Math.max(0, Math.min(CAT_CLIPS.dash.length - 1, Math.floor(progress * CAT_CLIPS.dash.length))));
+}
+
 export function catPose(run) {
   const player = run.player;
   if (run.state === 'dead') return pose('dead', 0);
   if (player.hurtFor > 0) return pose('hurt', 0);
-  if (player.dashFor > 0) {
-    const progress = 1 - player.dashFor / MOTION.dashDuration;
-    return pose('dash', Math.max(0, Math.min(CAT_CLIPS.dash.length - 1, Math.floor(progress * CAT_CLIPS.dash.length))));
-  }
+  if (player.dashFor > 0) return dashPose(player);
   const melee = run.attacks.find(a => a.kind === 'melee' && a.owner === 'player');
   if (melee) return pose('sword', melee.age < melee.windup ? 0 : melee.age <= melee.activeUntil ? 1 : 2);
   const weapon = run.weapons[run.activeWeapon];
@@ -43,6 +45,7 @@ export function catPose(run) {
     const sinceShot = getWeaponStats(weapon).cooldown - (weapon.readyAt - run.time);
     if (sinceShot >= 0 && sinceShot < 0.16) return pose('throw', sinceShot < 0.06 ? 0 : 1);
   }
+  if (player.dashAnimFor > 0) return dashPose(player);
   if (player.grounded && player.landFor > 0) return pose('land', player.landFor > LAND_DURATION / 2 ? 0 : 1);
   if (!player.grounded) return pose(player.vy < 0 ? 'jump' : 'fall', player.vy < -120 ? 0 : player.vy < 0 ? 1 : 0);
   if (Math.abs(player.vx) > 20) {

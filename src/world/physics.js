@@ -7,13 +7,15 @@ export const MOTION = {
 
 export const FALL_LINE = 700;
 export const LAND_DURATION = 0.14;
+// Roll flipbook runs at ~16fps so all 7 frames read; the physics burst stays short.
+export const DASH_ANIM_DURATION = 0.44;
 
 export function createPlayer(spawn) {
   return {
     x: spawn.x, y: spawn.y, w: MOTION.width, h: MOTION.height, vx: 0, vy: 0,
     facing: 1, grounded: true, jumpsUsed: 0, maxJumps: 1,
     hp: 100, maxHp: 100, damageMultiplier: 1,
-    invulnerableFor: 0, dashFor: 0, dashCooldownFor: 0,
+    invulnerableFor: 0, dashFor: 0, dashAnimFor: 0, dashCooldownFor: 0,
     coyoteFor: 0, jumpBufferFor: 0, landFor: 0, hurtFor: 0, safe: { x: spawn.x, y: spawn.y }
   };
 }
@@ -37,12 +39,14 @@ export function stepPlayer(player, input, platforms, dt) {
   player.hurtFor = tick(player.hurtFor, dt);
   const wasDashing = player.dashFor > 0;
   player.dashFor = tick(player.dashFor, dt);
+  player.dashAnimFor = tick(player.dashAnimFor, dt);
 
   const dir = (input.held('right') ? 1 : 0) - (input.held('left') ? 1 : 0);
   if (dir !== 0 && player.dashFor <= 0) player.facing = dir;
 
   if (input.consume('dash') && player.dashCooldownFor <= 0) {
     player.dashFor = MOTION.dashDuration;
+    player.dashAnimFor = DASH_ANIM_DURATION;
     player.dashCooldownFor = MOTION.dashCooldown;
     player.invulnerableFor = Math.max(player.invulnerableFor, MOTION.dashDuration);
   }
@@ -140,6 +144,7 @@ export function restoreSafePosition(player) {
   player.grounded = true;
   player.jumpsUsed = 0;
   player.dashFor = 0;
+  player.dashAnimFor = 0;
   player.coyoteFor = 0;
   player.jumpBufferFor = 0;
 }
