@@ -196,6 +196,70 @@ export const SPRITES = {
       '..kkkkkk..'
     ]
   },
+  hopper: {
+    scale: 2,
+    palette: { k: OUTLINE, g: '#6de06d', G: '#2e9e46', l: '#c8ff9a', w: '#ffffff', e: '#1a1010' },
+    rows: [
+      '..k.........k..',
+      '.kgk.......kgk.',
+      '.kggk.....kggk.',
+      '.kgggggggggggk.',
+      'kgglggggggglggk',
+      'kggwwegggewwggk',
+      'kggwwegggewwggk',
+      'kggggggkggggggk',
+      'kgllgggggggllgk',
+      'kGgggggggggggGk',
+      'kGGGGGGGGGGGGGk',
+      '.kkkkkkkkkkkkk.',
+      '.kGk.......kGk.',
+      '..k.........k..'
+    ]
+  },
+  charger: {
+    scale: 2,
+    palette: { k: OUTLINE, b: '#8a5a2a', B: '#5a3618', r: '#e02a3a', t: '#f0ecd8', w: '#ffffff', e: '#1a1010' },
+    rows: [
+      '....kkkkkkkkkkkk....',
+      '..kkbbbbbbbbbbbbkk..',
+      '.kbbrrbbbbbbbbrrbbk.',
+      '.kbbrrbbbbbbbbrrbbk.',
+      'kbbwwbbbbbbbbwwbbbbk',
+      'kbbwebbbbbbbbewbbbbk',
+      'kbbbbbbkkkkbbbbbbbbk',
+      'kbbbbbkttttkbbbbbbbk',
+      'kbbbbbkttttkbbbbbbbk',
+      'kBbbbbbbbbbbbbbbbbBk',
+      'kBBbbbbbbbbbbbbbbBBk',
+      'kBBBBBBBBBBBBBBBBBBk',
+      '.kkkkkkkkkkkkkkkkkk.',
+      '..kBk..........kBk..',
+      '..kBk..........kBk..',
+      '..kkk..........kkk..'
+    ]
+  },
+  lobber: {
+    scale: 2,
+    palette: { k: OUTLINE, o: '#e08a3a', O: '#a85a1e', l: '#ffd9a0', w: '#ffffff', e: '#1a1010', t: '#8a5a2a' },
+    rows: [
+      '..k.........k..',
+      '.kok.......kok.',
+      '.kook.....kook.',
+      '.koooooooooook.',
+      'koolooolooolook',
+      'kowweoooooewwok',
+      'kowweoooooewwok',
+      'kooookkkkkooook',
+      'koloookttkooolk',
+      'kOoooktttkoooOk',
+      'kOOooookkoooOOk',
+      'kOOOoooooooOOOk',
+      '.kOOOOOOOOOOOk.',
+      '..kkkkkkkkkkk..',
+      '..kOk.....kOk..',
+      '..kkk.....kkk..'
+    ]
+  },
   coin: {
     scale: 2,
     palette: { k: OUTLINE, y: '#ffd23f', h: '#fff3a0', Y: '#c8961a' },

@@ -233,6 +233,7 @@ function drawPickups(ctx, run, assets, camX, t) {
 }
 
 const WARN_PHASES = new Set(['warn', 'dashWarn', 'volleyWarn']);
+const FLIPPED = new Set(['shooter', 'hopper', 'charger', 'lobber']);
 
 function drawEnemy(ctx, enemy, assets, camX, t) {
   const image = assets.sprites[enemy.kind];
@@ -244,8 +245,12 @@ function drawEnemy(ctx, enemy, assets, camX, t) {
   ctx.save();
   if (enemy.hurtFor > 0) ctx.filter = 'brightness(2.2)';
   else if (s.frozenFor > 0) ctx.filter = 'saturate(0.3) brightness(1.4) hue-rotate(160deg)';
-  drawSprite(ctx, image, cx, cy, { flip: enemy.facing < 0 && enemy.kind === 'shooter' });
+  drawSprite(ctx, image, cx, cy, { flip: enemy.facing < 0 && FLIPPED.has(enemy.kind) });
   ctx.restore();
+  if (enemy.phase === 'dash') {
+    ctx.fillStyle = 'rgba(224, 42, 58, 0.4)';
+    for (let i = 1; i <= 3; i++) ctx.fillRect(Math.round(cx - enemy.facing * i * 10) - 6, Math.round(cy - 4 + i * 3), 12, 3);
+  }
   if (s.frozenFor > 0) {
     ctx.strokeStyle = '#dff6ff';
     ctx.lineWidth = 2;
@@ -409,6 +414,23 @@ function drawProjectile(ctx, attack, assets, camX) {
   const y = attack.y;
   if (x < -40 || x > VIEW.width + 40) return;
   if (attack.owner === 'enemy') {
+    if (attack.weapon === 'lob') {
+      ctx.save();
+      ctx.translate(Math.round(x), Math.round(y));
+      ctx.rotate(attack.age * 7);
+      ctx.fillStyle = 'rgba(224, 138, 58, 0.35)';
+      ctx.fillRect(-9, -9, 18, 18);
+      ctx.fillStyle = '#22161a';
+      ctx.fillRect(-6, -5, 12, 11);
+      ctx.fillStyle = '#e08a3a';
+      ctx.fillRect(-4, -3, 8, 7);
+      ctx.fillStyle = '#5a3618';
+      ctx.fillRect(-5, -6, 10, 4);
+      ctx.fillStyle = '#6de06d';
+      ctx.fillRect(1, -8, 3, 3);
+      ctx.restore();
+      return;
+    }
     ctx.fillStyle = 'rgba(255, 80, 120, 0.35)';
     ctx.fillRect(Math.round(x) - 9, Math.round(y) - 9, 18, 18);
     ctx.fillStyle = '#22161a';

@@ -219,6 +219,7 @@ function stepPlayerProjectile(run, attack, dt) {
 }
 
 function stepEnemyProjectile(run, attack, dt) {
+  attack.vy += (attack.gravity ?? 0) * dt;
   const x0 = attack.x;
   const y0 = attack.y;
   const x1 = x0 + attack.vx * dt;
@@ -228,6 +229,7 @@ function stepEnemyProjectile(run, attack, dt) {
     return;
   }
   if (terrainHit(run, x0, y0, x1, y1) !== null) {
+    if (attack.weapon === 'lob') run.effects.push({ kind: 'explosion', x: x1, y: y1, radius: 22, age: 0, ttl: 0.3 });
     attack.done = true;
     return;
   }

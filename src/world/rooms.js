@@ -7,9 +7,9 @@ export const ENEMY_COUNTS = [6, 7, 8, 9, 10, 12];
 export const THEMES = ['grass', 'dusk', 'castle'];
 
 const ENEMY_POOLS = [
-  ['walker', 'walker', 'flyer', 'shooter'],
-  ['walker', 'flyer', 'flyer', 'shooter'],
-  ['walker', 'flyer', 'shooter', 'shooter']
+  ['walker', 'walker', 'flyer', 'shooter', 'hopper'],
+  ['walker', 'flyer', 'flyer', 'shooter', 'hopper', 'charger'],
+  ['walker', 'flyer', 'shooter', 'shooter', 'charger', 'lobber']
 ];
 
 const EDGE_MARGIN = 20;

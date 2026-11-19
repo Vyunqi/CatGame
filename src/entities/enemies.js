@@ -5,10 +5,20 @@ const SPECS = {
   walker: { w: 34, h: 30, hp: 30, speed: 70, contact: 10 },
   flyer: { w: 30, h: 26, hp: 22, speed: 120, contact: 10 },
   shooter: { w: 32, h: 36, hp: 26, speed: 80, contact: 10 },
+  hopper: { w: 30, h: 28, hp: 26, speed: 240, contact: 12 },
+  charger: { w: 40, h: 32, hp: 44, speed: 60, contact: 10 },
+  lobber: { w: 30, h: 32, hp: 24, speed: 70, contact: 8 },
   boss: { w: 96, h: 96, hp: 700, speed: 60, contact: 15 }
 };
 
 export const SHOOTER = { interval: 1.6, warn: 0.3, range: 640, bulletSpeed: 300, damage: 8 };
+export const CHARGER = { warn: 0.5, dash: 0.7, dashSpeed: 440, recover: 0.9, dashContact: 16 };
+export const LOBBER = { interval: 2.2, warn: 0.4, range: 620, gravity: 760, flight: 0.95, damage: 10 };
+const DETECT = {
+  walker: [420, 240], shooter: [560, 300], hopper: [520, 300], charger: [460, 110], lobber: [620, 340]
+};
+const AGGRO_MEMORY = 3;
+const JUMP_VY = -700;
 export const BOSS = {
   dashWarn: 0.6, dash: 0.45, dashSpeed: 520, recoverAfterDash: 0.7,
   volleyWarn: 0.5, recoverAfterVolley: 0.9, enrageAt: 0.4, enrageRecovery: 0.7,
@@ -23,8 +33,9 @@ export function makeEnemy(kind, spawn, id, scale = 1) {
     id, kind, x: spawn.x, y: spawn.y - spec.h, w: spec.w, h: spec.h, vx: 0, vy: 0,
     hp, maxHp: hp, boss, speed: spec.speed, contact: spec.contact,
     phase: boss ? 'recover2' : 'idle',
-    timer: boss ? 1.2 : SHOOTER.interval,
+    timer: boss ? 1.2 : kind === 'hopper' ? 0.6 : kind === 'lobber' ? LOBBER.interval : SHOOTER.interval,
     facing: -1, statuses: createStatuses(), hurtFor: 0, knockFor: 0,
+    aggroFor: 0, jumpFor: 0, leapFor: 0, leapVx: 0,
     homeY: spawn.y - spec.h
   };
 }
@@ -39,7 +50,7 @@ function supportOf(enemy, platforms) {
   return platforms.find(p => cx >= p.x && cx <= p.x + p.w && Math.abs(p.y - feet) < 0.5) ?? null;
 }
 
-function moveOnGround(enemy, run, desiredVx, dt) {
+function moveOnGround(enemy, run, desiredVx, dt, free = false) {
   const platforms = run.room.platforms;
   if (enemy.knockFor > 0) enemy.vx *= 0.86;
   else enemy.vx = desiredVx;
@@ -62,11 +73,33 @@ function moveOnGround(enemy, run, desiredVx, dt) {
   const support = supportOf(enemy, platforms);
   enemy.x += enemy.vx * dt;
   let blocked = false;
-  const minX = support ? support.x : 0;
-  const maxX = support ? support.x + support.w - enemy.w : run.room.width - enemy.w;
+  const minX = free ? 0 : support ? support.x : 0;
+  const maxX = free ? run.room.width - enemy.w : support ? support.x + support.w - enemy.w : run.room.width - enemy.w;
   if (enemy.x < minX) { enemy.x = minX; blocked = true; }
   if (enemy.x > maxX) { enemy.x = maxX; blocked = true; }
   return blocked;
+}
+
+function sense(enemy, dx, dy, dt) {
+  const [rx, ry] = DETECT[enemy.kind] ?? [0, 0];
+  if (Math.abs(dx) < rx && Math.abs(dy) < ry) enemy.aggroFor = AGGRO_MEMORY;
+  else enemy.aggroFor = Math.max(0, enemy.aggroFor - dt);
+  return enemy.aggroFor > 0;
+}
+
+function chaseMove(enemy, run, desiredVx, dt, dx, dy) {
+  const support = supportOf(enemy, run.room.platforms);
+  if (support && enemy.jumpFor <= 0 && enemy.knockFor <= 0) {
+    const edgeDist = enemy.facing > 0 ? support.x + support.w - (enemy.x + enemy.w) : enemy.x - support.x;
+    const gapAhead = dx * enemy.facing > 60 && edgeDist < 26;
+    if ((dy < -46 && Math.abs(dx) < 170) || gapAhead) {
+      enemy.vy = JUMP_VY;
+      enemy.jumpFor = 0.6;
+      enemy.leapFor = 0.55;
+    }
+  }
+  const boost = enemy.leapFor > 0 ? 2.4 : 1;
+  return moveOnGround(enemy, run, desiredVx * boost, dt, true);
 }
 
 function fireAt(run, enemy, count, speed, damage, spread) {
@@ -87,12 +120,19 @@ function fireAt(run, enemy, count, speed, damage, spread) {
 function stepWalker(enemy, run, slow, dt) {
   const p = centerOf(run.player);
   const c = centerOf(enemy);
-  let speed = enemy.speed;
-  if (Math.abs(p.x - c.x) < 240 && Math.abs(p.y - c.y) < 70) {
-    enemy.facing = Math.sign(p.x - c.x) || enemy.facing;
-    speed *= 1.5;
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  if (!sense(enemy, dx, dy, dt)) {
+    if (moveOnGround(enemy, run, enemy.facing * enemy.speed * slow, dt) && enemy.knockFor <= 0) enemy.facing *= -1;
+    return;
   }
-  if (moveOnGround(enemy, run, enemy.facing * speed * slow, dt) && enemy.knockFor <= 0) enemy.facing *= -1;
+  enemy.facing = Math.sign(dx) || enemy.facing;
+  const blocked = chaseMove(enemy, run, enemy.facing * enemy.speed * 1.6 * slow, dt, dx, dy);
+  if (blocked && enemy.knockFor <= 0 && dy < -40 && enemy.jumpFor <= 0) {
+    enemy.vy = JUMP_VY;
+    enemy.jumpFor = 0.6;
+    enemy.leapFor = 0.55;
+  }
 }
 
 function stepFlyer(enemy, run, slow, dt, time) {
@@ -125,12 +165,15 @@ function stepShooter(enemy, run, slow, dt) {
   const p = centerOf(run.player);
   const c = centerOf(enemy);
   const dx = p.x - c.x;
+  const dy = p.y - c.y;
   const distance = Math.abs(dx);
+  const aggro = sense(enemy, dx, dy, dt);
   enemy.facing = Math.sign(dx) || enemy.facing;
   let desired = 0;
   if (distance < 220) desired = -enemy.facing * enemy.speed;
   else if (distance > 420 && distance < SHOOTER.range) desired = enemy.facing * enemy.speed;
-  moveOnGround(enemy, run, desired * slow, dt);
+  if (aggro) chaseMove(enemy, run, desired * slow, dt, dx, dy);
+  else moveOnGround(enemy, run, desired * slow, dt);
 
   if (distance > SHOOTER.range || Math.abs(p.y - c.y) > 300) {
     enemy.phase = 'idle';
@@ -142,6 +185,107 @@ function stepShooter(enemy, run, slow, dt) {
   if (enemy.timer <= 0) {
     fireAt(run, enemy, 1, SHOOTER.bulletSpeed, SHOOTER.damage, 0);
     enemy.timer = SHOOTER.interval;
+    enemy.phase = 'idle';
+  }
+}
+
+function stepHopper(enemy, run, slow, dt) {
+  const p = centerOf(run.player);
+  const c = centerOf(enemy);
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  const aggro = sense(enemy, dx, dy, dt);
+  const grounded = supportOf(enemy, run.room.platforms) !== null;
+  enemy.timer -= dt * slow;
+  let desired = 0;
+  if (aggro) {
+    enemy.facing = Math.sign(dx) || enemy.facing;
+    if (grounded && enemy.timer <= 0 && enemy.knockFor <= 0) {
+      enemy.vy = -560;
+      enemy.leapVx = Math.max(-260, Math.min(260, dx / 0.62));
+      enemy.timer = 1.15;
+    }
+    if (!grounded) desired = enemy.leapVx;
+    moveOnGround(enemy, run, desired * slow, dt, true);
+  } else {
+    if (grounded && enemy.timer <= 0 && enemy.knockFor <= 0) {
+      enemy.vy = -260;
+      enemy.timer = 1.6;
+    }
+    if (moveOnGround(enemy, run, enemy.facing * 40 * slow, dt) && enemy.knockFor <= 0) enemy.facing *= -1;
+  }
+}
+
+function stepCharger(enemy, run, slow, dt) {
+  const p = centerOf(run.player);
+  const c = centerOf(enemy);
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  const aggro = sense(enemy, dx, dy, dt);
+  enemy.timer -= dt * slow;
+  let desired = 0;
+  let free = false;
+  switch (enemy.phase) {
+    case 'warn':
+      if (enemy.timer <= 0) { enemy.phase = 'dash'; enemy.timer = CHARGER.dash; }
+      break;
+    case 'dash':
+      desired = enemy.facing * CHARGER.dashSpeed;
+      free = true;
+      if (enemy.timer <= 0) { enemy.phase = 'recover'; enemy.timer = CHARGER.recover; }
+      break;
+    case 'recover':
+      free = true;
+      if (enemy.timer <= 0) enemy.phase = 'idle';
+      break;
+    default:
+      if (aggro && Math.abs(dy) < 110 && Math.abs(dx) > 60 && enemy.knockFor <= 0) {
+        enemy.phase = 'warn';
+        enemy.timer = CHARGER.warn;
+        enemy.facing = Math.sign(dx) || enemy.facing;
+      } else if (moveOnGround(enemy, run, enemy.facing * enemy.speed * slow, dt) && enemy.knockFor <= 0) {
+        enemy.facing *= -1;
+      }
+  }
+  enemy.contact = enemy.phase === 'dash' ? CHARGER.dashContact : SPECS.charger.contact;
+  if (enemy.phase !== 'idle' || desired !== 0) {
+    const blocked = moveOnGround(enemy, run, desired * slow, dt, free);
+    if (blocked && enemy.phase === 'dash') { enemy.phase = 'recover'; enemy.timer = CHARGER.recover; }
+  }
+}
+
+function stepLobber(enemy, run, slow, dt) {
+  const p = centerOf(run.player);
+  const c = centerOf(enemy);
+  const dx = p.x - c.x;
+  const dy = p.y - c.y;
+  const distance = Math.abs(dx);
+  const aggro = sense(enemy, dx, dy, dt);
+  enemy.facing = Math.sign(dx) || enemy.facing;
+  let desired = 0;
+  if (distance < 240) desired = -enemy.facing * enemy.speed;
+  else if (distance > 460 && distance < LOBBER.range) desired = enemy.facing * enemy.speed;
+  if (aggro) chaseMove(enemy, run, desired * slow, dt, dx, dy);
+  else moveOnGround(enemy, run, desired * slow, dt);
+
+  if (!aggro || distance > LOBBER.range || Math.abs(dy) > 340) {
+    enemy.phase = 'idle';
+    enemy.timer = Math.max(enemy.timer, LOBBER.warn + 0.3);
+    return;
+  }
+  enemy.timer -= dt * slow;
+  if (enemy.timer <= LOBBER.warn) enemy.phase = 'warn';
+  if (enemy.timer <= 0) {
+    const t = LOBBER.flight;
+    const vx = dx / t;
+    const vy = Math.max(-620, (dy - 0.5 * LOBBER.gravity * t * t) / t);
+    run.attacks.push({
+      id: ++run.nextEntityId, kind: 'projectile', owner: 'enemy', weapon: 'lob',
+      x: c.x, y: c.y, vx, vy, gravity: LOBBER.gravity,
+      age: 0, ttl: t + 0.8, damage: LOBBER.damage, radius: 7,
+      hitIds: new Set(), modules: [], pierceLeft: 0, bouncesLeft: 0
+    });
+    enemy.timer = LOBBER.interval;
     enemy.phase = 'idle';
   }
 }
@@ -207,12 +351,17 @@ export function stepEnemies(run, dt) {
     stepStatuses(enemy, dt);
     enemy.hurtFor = Math.max(0, enemy.hurtFor - dt);
     enemy.knockFor = Math.max(0, enemy.knockFor - dt);
+    enemy.jumpFor = Math.max(0, enemy.jumpFor - dt);
+    enemy.leapFor = Math.max(0, enemy.leapFor - dt);
     if (enemy.hp <= 0 || enemy.statuses.frozenFor > 0) continue;
     const slow = enemy.statuses.slowFor > 0 ? (enemy.boss ? 0.6 : 0.5) : 1;
 
     if (enemy.kind === 'walker') stepWalker(enemy, run, slow, dt);
     else if (enemy.kind === 'flyer') stepFlyer(enemy, run, slow, dt, run.time);
     else if (enemy.kind === 'shooter') stepShooter(enemy, run, slow, dt);
+    else if (enemy.kind === 'hopper') stepHopper(enemy, run, slow, dt);
+    else if (enemy.kind === 'charger') stepCharger(enemy, run, slow, dt);
+    else if (enemy.kind === 'lobber') stepLobber(enemy, run, slow, dt);
     else stepBoss(enemy, run, slow, dt);
 
     if (enemy.y > 700) {
