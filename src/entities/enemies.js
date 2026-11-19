@@ -35,7 +35,7 @@ export function makeEnemy(kind, spawn, id, scale = 1) {
     phase: boss ? 'recover2' : 'idle',
     timer: boss ? 1.2 : kind === 'hopper' ? 0.6 : kind === 'lobber' ? LOBBER.interval : SHOOTER.interval,
     facing: -1, statuses: createStatuses(), hurtFor: 0, knockFor: 0,
-    aggroFor: 0, jumpFor: 0, leapFor: 0, leapVx: 0,
+    aggroFor: 0, jumpFor: 0, leaping: false, leapVx: 0,
     homeY: spawn.y - spec.h
   };
 }
@@ -50,34 +50,106 @@ function supportOf(enemy, platforms) {
   return platforms.find(p => cx >= p.x && cx <= p.x + p.w && Math.abs(p.y - feet) < 0.5) ?? null;
 }
 
+function landingAt(platforms, x, w, previousFeet, feet) {
+  let landing = null;
+  for (const p of platforms) {
+    if (x < p.x + p.w && x + w > p.x && previousFeet <= p.y + 1e-6 && feet >= p.y) {
+      if (!landing || p.y < landing.y) landing = p;
+    }
+  }
+  return landing;
+}
+
 function moveOnGround(enemy, run, desiredVx, dt, free = false) {
   const platforms = run.room.platforms;
-  if (enemy.knockFor > 0) enemy.vx *= 0.86;
-  else enemy.vx = desiredVx;
+  if (enemy.knockFor > 0) {
+    enemy.leaping = false;
+    enemy.vx *= 0.86;
+  } else enemy.vx = enemy.leaping ? enemy.leapVx : desiredVx;
 
   const previousFeet = enemy.y + enemy.h;
   enemy.vy = Math.min(1100, enemy.vy + GRAVITY * dt);
   enemy.y += enemy.vy * dt;
   const feet = enemy.y + enemy.h;
-  let landing = null;
-  for (const p of platforms) {
-    if (enemy.x < p.x + p.w && enemy.x + enemy.w > p.x && previousFeet <= p.y + 1e-6 && feet >= p.y) {
-      if (!landing || p.y < landing.y) landing = p;
-    }
-  }
+  const landing = landingAt(platforms, enemy.x, enemy.w, previousFeet, feet);
   if (landing) {
     enemy.y = landing.y - enemy.h;
     enemy.vy = 0;
+    enemy.leaping = false;
   }
 
   const support = supportOf(enemy, platforms);
   enemy.x += enemy.vx * dt;
   let blocked = false;
-  const minX = free ? 0 : support ? support.x : 0;
-  const maxX = free ? run.room.width - enemy.w : support ? support.x + support.w - enemy.w : run.room.width - enemy.w;
+  let minX = 0;
+  let maxX = run.room.width - enemy.w;
+  if (support && (enemy.knockFor <= 0 || !free)) {
+    minX = support.x;
+    maxX = support.x + support.w - enemy.w;
+    if (free) {
+      for (const p of platforms) {
+        if (Math.abs(p.y - support.y) < 0.5 && p.x <= maxX + enemy.w && p.x + p.w >= minX) {
+          minX = Math.min(minX, p.x);
+          maxX = Math.max(maxX, p.x + p.w - enemy.w);
+        }
+      }
+    }
+  }
   if (enemy.x < minX) { enemy.x = minX; blocked = true; }
   if (enemy.x > maxX) { enemy.x = maxX; blocked = true; }
   return blocked;
+}
+
+function planLeap(enemy, run, support, targetX, targetY, jumpVy, maxVx, allowSame = false) {
+  const dt = 1 / 60;
+  const cx = enemy.x + enemy.w / 2;
+  const margin = enemy.w / 2 + 4;
+  const startDistance = Math.abs(targetX - cx) + Math.abs(targetY - support.y);
+  const candidates = run.room.platforms.map(p => {
+    const x = Math.max(p.x + margin, Math.min(p.x + p.w - margin, targetX));
+    return { p, x, distance: Math.abs(targetX - x) + Math.abs(targetY - p.y) };
+  }).filter(({ p, distance }) => p.w >= margin * 2
+    && (p === support ? allowSame : distance < startDistance))
+    .sort((a, b) => a.distance - b.distance);
+
+  for (const { p, x: target } of candidates) {
+    let feet = support.y;
+    let vy = jumpVy;
+    let steps = 0;
+    for (let i = 0; i < 120; i++) {
+      const previousFeet = feet;
+      vy = Math.min(1100, vy + GRAVITY * dt);
+      feet += vy * dt;
+      if (vy >= 0 && previousFeet <= p.y + 1e-6 && feet >= p.y) { steps = i + 1; break; }
+    }
+    if (steps < 2) continue;
+    const before = (steps - 1) * dt;
+    const after = steps * dt;
+    const left = p.x + 4 - enemy.x;
+    const right = p.x + p.w - enemy.w - 4 - enemy.x;
+    const minVx = Math.max(-maxVx, left / before, left / after);
+    const limitVx = Math.min(maxVx, right / before, right / after);
+    if (minVx > limitVx) continue;
+    const vx = Math.max(minVx, Math.min(limitVx, (target - cx) / after));
+    let x = enemy.x;
+    feet = support.y;
+    vy = jumpVy;
+    for (let i = 0; i < 120; i++) {
+      const previousFeet = feet;
+      vy = Math.min(1100, vy + GRAVITY * dt);
+      feet += vy * dt;
+      const landing = landingAt(run.room.platforms, x, enemy.w, previousFeet, feet);
+      const nextX = Math.max(0, Math.min(run.room.width - enemy.w, x + vx * dt));
+      if (landing) {
+        if (landing === p && Math.min(x, nextX) >= p.x + 4 - 1e-6
+          && Math.max(x, nextX) + enemy.w <= p.x + p.w - 4 + 1e-6) return vx;
+        break;
+      }
+      x = nextX;
+      if (feet > 700) break;
+    }
+  }
+  return null;
 }
 
 function sense(enemy, dx, dy, dt) {
@@ -90,16 +162,22 @@ function sense(enemy, dx, dy, dt) {
 function chaseMove(enemy, run, desiredVx, dt, dx, dy) {
   const support = supportOf(enemy, run.room.platforms);
   if (support && enemy.jumpFor <= 0 && enemy.knockFor <= 0) {
-    const edgeDist = enemy.facing > 0 ? support.x + support.w - (enemy.x + enemy.w) : enemy.x - support.x;
-    const gapAhead = dx * enemy.facing > 60 && edgeDist < 26;
-    if ((dy < -46 && Math.abs(dx) < 170) || gapAhead) {
-      enemy.vy = JUMP_VY;
-      enemy.jumpFor = 0.6;
-      enemy.leapFor = 0.55;
+    const direction = Math.sign(desiredVx);
+    const edgeDist = direction > 0 ? support.x + support.w - (enemy.x + enemy.w) : enemy.x - support.x;
+    const gapAhead = dx * direction > 0 && edgeDist < 26;
+    if ((dy < -46 && Math.abs(dx) < 170 && desiredVx * dx >= 0) || gapAhead) {
+      const speed = Math.abs(desiredVx) || enemy.speed;
+      const vx = planLeap(enemy, run, support, run.player.x + run.player.w / 2,
+        run.player.y + run.player.h, JUMP_VY, speed * 2.4);
+      if (vx !== null) {
+        enemy.vy = JUMP_VY;
+        enemy.jumpFor = 0.6;
+        enemy.leaping = true;
+        enemy.leapVx = vx;
+      }
     }
   }
-  const boost = enemy.leapFor > 0 ? 2.4 : 1;
-  return moveOnGround(enemy, run, desiredVx * boost, dt, true);
+  return moveOnGround(enemy, run, desiredVx, dt, true);
 }
 
 function fireAt(run, enemy, count, speed, damage, spread) {
@@ -127,12 +205,7 @@ function stepWalker(enemy, run, slow, dt) {
     return;
   }
   enemy.facing = Math.sign(dx) || enemy.facing;
-  const blocked = chaseMove(enemy, run, enemy.facing * enemy.speed * 1.6 * slow, dt, dx, dy);
-  if (blocked && enemy.knockFor <= 0 && dy < -40 && enemy.jumpFor <= 0) {
-    enemy.vy = JUMP_VY;
-    enemy.jumpFor = 0.6;
-    enemy.leapFor = 0.55;
-  }
+  chaseMove(enemy, run, enemy.facing * enemy.speed * 1.6 * slow, dt, dx, dy);
 }
 
 function stepFlyer(enemy, run, slow, dt, time) {
@@ -195,25 +268,23 @@ function stepHopper(enemy, run, slow, dt) {
   const dx = p.x - c.x;
   const dy = p.y - c.y;
   const aggro = sense(enemy, dx, dy, dt);
-  const grounded = supportOf(enemy, run.room.platforms) !== null;
+  const support = supportOf(enemy, run.room.platforms);
   enemy.timer -= dt * slow;
-  let desired = 0;
-  if (aggro) {
-    enemy.facing = Math.sign(dx) || enemy.facing;
-    if (grounded && enemy.timer <= 0 && enemy.knockFor <= 0) {
-      enemy.vy = -560;
-      enemy.leapVx = Math.max(-260, Math.min(260, dx / 0.62));
-      enemy.timer = 1.15;
+  if (aggro) enemy.facing = Math.sign(dx) || enemy.facing;
+  if (support && enemy.timer <= 0 && enemy.knockFor <= 0) {
+    const jumpVy = aggro ? -560 : -260;
+    const targetX = aggro ? p.x : c.x + enemy.facing * 40 * slow;
+    const vx = planLeap(enemy, run, support, targetX, aggro ? run.player.y + run.player.h : support.y,
+      jumpVy, (aggro ? 260 : 40) * slow, true);
+    if (vx !== null) {
+      enemy.vy = jumpVy;
+      enemy.leapVx = vx;
+      enemy.leaping = true;
     }
-    if (!grounded) desired = enemy.leapVx;
-    moveOnGround(enemy, run, desired * slow, dt, true);
-  } else {
-    if (grounded && enemy.timer <= 0 && enemy.knockFor <= 0) {
-      enemy.vy = -260;
-      enemy.timer = 1.6;
-    }
-    if (moveOnGround(enemy, run, enemy.facing * 40 * slow, dt) && enemy.knockFor <= 0) enemy.facing *= -1;
+    enemy.timer = aggro ? 1.15 : 1.6;
   }
+  const desired = aggro ? 0 : enemy.facing * 40 * slow;
+  if (moveOnGround(enemy, run, desired, dt, aggro) && !aggro && enemy.knockFor <= 0) enemy.facing *= -1;
 }
 
 function stepCharger(enemy, run, slow, dt) {
@@ -352,7 +423,6 @@ export function stepEnemies(run, dt) {
     enemy.hurtFor = Math.max(0, enemy.hurtFor - dt);
     enemy.knockFor = Math.max(0, enemy.knockFor - dt);
     enemy.jumpFor = Math.max(0, enemy.jumpFor - dt);
-    enemy.leapFor = Math.max(0, enemy.leapFor - dt);
     if (enemy.hp <= 0 || enemy.statuses.frozenFor > 0) continue;
     const slow = enemy.statuses.slowFor > 0 ? (enemy.boss ? 0.6 : 0.5) : 1;
 
