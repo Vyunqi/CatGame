@@ -62,6 +62,7 @@ function collectDefeated(run) {
       run.score += BOSS_SCORE;
       run.enemies = [];
       run.attacks = [];
+      run.effects = [];
       run.pending = null;
       run.state = 'won';
       return;

@@ -179,7 +179,7 @@ export function enterRoom(run, index) {
   run.roomIndex = index;
   run.room = room;
   run.enemies = index >= BOSS_ROOM
-    ? [makeEnemy('boss', room.bossSpawn, ++run.nextEntityId)]
+    ? [makeEnemy('ratBoss', room.bossSpawn, ++run.nextEntityId)]
     : room.enemySpawns.map(s => makeEnemy(s.kind, s, ++run.nextEntityId, scale));
   run.attacks = [];
   run.effects = [];

@@ -1,5 +1,6 @@
 import { getWeaponStats, COMBO_WINDOW, KNOCKBACK } from './catalog.js';
-import { resolveHit, damagePlayer } from './damage.js';
+import { resolveHit } from './damage.js';
+import { stepEnemyAttack } from './enemy-attacks.js';
 
 const SWORDWAVE = { speed: 560, ttl: 0.7, radius: 18, damageRatio: 0.6, pierce: 2 };
 const COMBO_ARCS = { 1: [-1.1, 0.5], 2: [-0.5, 1.1], 3: [-1.4, 1.4] };
@@ -218,33 +219,14 @@ function stepPlayerProjectile(run, attack, dt) {
   if (x1 < -60 || x1 > run.room.width + 60 || y1 > run.room.height + 60 || y1 < -200) attack.done = true;
 }
 
-function stepEnemyProjectile(run, attack, dt) {
-  attack.vy += (attack.gravity ?? 0) * dt;
-  const x0 = attack.x;
-  const y0 = attack.y;
-  const x1 = x0 + attack.vx * dt;
-  const y1 = y0 + attack.vy * dt;
-  if (sweep(x0, y0, x1, y1, run.player, attack.radius) !== null && damagePlayer(run, attack.damage)) {
-    attack.done = true;
-    return;
-  }
-  if (terrainHit(run, x0, y0, x1, y1) !== null) {
-    if (attack.weapon === 'lob') run.effects.push({ kind: 'explosion', x: x1, y: y1, radius: 22, age: 0, ttl: 0.3 });
-    attack.done = true;
-    return;
-  }
-  attack.x = x1;
-  attack.y = y1;
-  if (x1 < -60 || x1 > run.room.width + 60 || y1 > run.room.height + 60 || y1 < -200) attack.done = true;
-}
-
 export function stepAttacks(run, dt) {
+  if (run.state !== 'playing') return;
   for (const attack of run.attacks) {
-    attack.age += dt;
-    if (attack.age >= attack.ttl) continue;
-    if (attack.kind === 'melee') stepMelee(run, attack);
-    else if (attack.owner === 'player') stepPlayerProjectile(run, attack, dt);
-    else stepEnemyProjectile(run, attack, dt);
+    if (attack.kind !== 'enemyMelee') attack.age += dt;
+    if (attack.age >= attack.ttl || attack.done) continue;
+    if (attack.owner === 'enemy') stepEnemyAttack(run, attack, dt);
+    else if (attack.kind === 'melee') stepMelee(run, attack);
+    else stepPlayerProjectile(run, attack, dt);
     if (run.state === 'dead') break;
   }
   run.attacks = run.attacks.filter(attack => !attack.done && attack.age < attack.ttl);

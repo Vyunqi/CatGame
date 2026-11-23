@@ -7,9 +7,9 @@ export const ENEMY_COUNTS = [6, 7, 8, 9, 10, 12];
 export const THEMES = ['grass', 'dusk', 'castle'];
 
 const ENEMY_POOLS = [
-  ['walker', 'walker', 'flyer', 'shooter', 'hopper'],
-  ['walker', 'flyer', 'flyer', 'shooter', 'hopper', 'charger'],
-  ['walker', 'flyer', 'shooter', 'shooter', 'charger', 'lobber']
+  ['ant', 'ant', 'ant', 'boar', 'wasp'],
+  ['ant', 'ant', 'boar', 'boar', 'wasp', 'wasp'],
+  ['ant', 'boar', 'boar', 'wasp', 'wasp', 'wasp']
 ];
 
 const EDGE_MARGIN = 20;
@@ -144,9 +144,9 @@ export function generateRoom(seed, index) {
   const pool = ENEMY_POOLS[zone];
   for (let i = 0; i < ENEMY_COUNTS[index]; i++) {
     const seg = spawnSegments[i % spawnSegments.length];
-    const kind = i === 0 && index === 1 ? 'shooter' : pick(rng, pool);
+    const kind = i === 0 && index === 1 ? 'wasp' : pick(rng, pool);
     const x = seg.x + between(rng, 24, Math.max(24, seg.w - 56));
-    const y = kind === 'flyer' ? seg.y - between(rng, 130, 180) : seg.y;
+    const y = kind === 'wasp' ? seg.y - between(rng, 130, 180) + 15 : seg.y;
     enemySpawns.push({ kind, x, y });
   }
 

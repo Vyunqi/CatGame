@@ -1,3 +1,6 @@
+import { MONSTER_FRAME_NAMES } from './monster-animation.js';
+import { WEAPONS } from '../combat/catalog.js';
+
 const OUTLINE = '#22161a';
 
 const cake = inner => `..k${inner}k..`;
@@ -327,9 +330,11 @@ function loadImage(src) {
 
 export async function loadAssets() {
   const sprites = {};
-  for (const [name, sprite] of Object.entries(SPRITES)) sprites[name] = paintSprite(sprite);
-  const catFrames = await Promise.all(
-    Array.from({ length: 35 }, (_, i) => loadImage(`assets/cat-frames/f${String(i).padStart(2, '0')}.png`)),
-  );
-  return { catFrames, sprites };
+  for (const name of [...Object.keys(WEAPONS), 'coin', 'chest']) sprites[name] = paintSprite(SPRITES[name]);
+  const [catFrames, frames] = await Promise.all([
+    Promise.all(Array.from({ length: 35 }, (_, i) => loadImage(`assets/cat-frames/f${String(i).padStart(2, '0')}.png`))),
+    Promise.all(MONSTER_FRAME_NAMES.map(name => loadImage(`assets/monster-frames/${name}.png`)))
+  ]);
+  const monsterFrames = Object.fromEntries(MONSTER_FRAME_NAMES.map((name, i) => [name, frames[i]]));
+  return { catFrames, sprites, monsterFrames };
 }

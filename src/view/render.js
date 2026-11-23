@@ -1,6 +1,7 @@
 import { catPose, CAT_CLIPS, CAT_SCALE, CAT_BASE } from './cat.js';
 import { LAND_DURATION } from '../world/physics.js';
 import { WEAPONS } from '../combat/catalog.js';
+import { MONSTER_CLIPS, monsterPose, projectilePose } from './monster-animation.js';
 
 export const VIEW = { width: 960, height: 540 };
 
@@ -232,55 +233,62 @@ function drawPickups(ctx, run, assets, camX, t) {
   }
 }
 
-const WARN_PHASES = new Set(['warn', 'dashWarn', 'volleyWarn']);
-const FLIPPED = new Set(['shooter', 'hopper', 'charger', 'lobber']);
+function drawMonsterFrame(ctx, assets, pose, x, y, scale, facing = 1, rotate = 0) {
+  const spec = MONSTER_CLIPS[pose.clip];
+  const image = assets.monsterFrames[`${pose.clip}-${pose.frame}`];
+  ctx.save();
+  ctx.translate(Math.round(x), Math.round(y));
+  if (rotate) ctx.rotate(rotate);
+  ctx.scale(facing, 1);
+  ctx.drawImage(image, -spec.anchor[0] * scale, -spec.anchor[1] * scale, image.width * scale, image.height * scale);
+  ctx.restore();
+}
 
-function drawEnemy(ctx, enemy, assets, camX, t) {
-  const image = assets.sprites[enemy.kind];
+function drawEnemy(ctx, enemy, assets, camX) {
+  const pose = monsterPose(enemy);
+  const spec = MONSTER_CLIPS[pose.clip];
+  const scale = enemy.w / spec.bodyWidth;
   const cx = enemy.x + enemy.w / 2 - camX;
-  if (cx < -120 || cx > VIEW.width + 120) return;
-  const bob = enemy.kind === 'flyer' ? Math.sin(t * 8 + enemy.id) * 2 : 0;
-  const cy = enemy.y + enemy.h - image.height / 2 + bob;
+  if (cx < -180 || cx > VIEW.width + 180) return;
+  const anchorY = enemy.y + (spec.centered ? enemy.h / 2 : enemy.h);
+  const top = anchorY - spec.anchor[1] * scale;
+  const t = enemy.localTime;
   const s = enemy.statuses;
   ctx.save();
   if (enemy.hurtFor > 0) ctx.filter = 'brightness(2.2)';
   else if (s.frozenFor > 0) ctx.filter = 'saturate(0.3) brightness(1.4) hue-rotate(160deg)';
-  drawSprite(ctx, image, cx, cy, { flip: enemy.facing < 0 && FLIPPED.has(enemy.kind) });
+  drawMonsterFrame(ctx, assets, pose, cx, anchorY, scale, enemy.facing);
   ctx.restore();
-  if (enemy.phase === 'dash') {
-    ctx.fillStyle = 'rgba(224, 42, 58, 0.4)';
-    for (let i = 1; i <= 3; i++) ctx.fillRect(Math.round(cx - enemy.facing * i * 10) - 6, Math.round(cy - 4 + i * 3), 12, 3);
-  }
   if (s.frozenFor > 0) {
     ctx.strokeStyle = '#dff6ff';
     ctx.lineWidth = 2;
-    ctx.strokeRect(Math.round(cx - image.width / 2) - 3, Math.round(cy - image.height / 2) - 3, image.width + 6, image.height + 6);
+    ctx.strokeRect(Math.round(enemy.x - camX) - 3, Math.round(enemy.y) - 3, enemy.w + 6, enemy.h + 6);
   } else if (s.slowFor > 0) {
     ctx.fillStyle = '#9fe0ff';
-    for (let i = 0; i < 3; i++) ctx.fillRect(Math.round(cx - 10 + i * 9), Math.round(enemy.y - 6 + Math.sin(t * 6 + i) * 2), 3, 3);
+    for (let i = 0; i < 3; i++) ctx.fillRect(Math.round(cx - 10 + i * 9), Math.round(top - 6 + Math.sin(t * 6 + i) * 2), 3, 3);
   }
   if (s.burnFor > 0) {
     for (let i = 0; i < 3; i++) {
-      const fy = enemy.y + 4 - ((t * 30 + i * 9) % 18);
+      const fy = top + 4 - ((t * 30 + i * 9) % 18);
       ctx.fillStyle = i % 2 ? '#ff9a2a' : '#ff4a2a';
       ctx.fillRect(Math.round(cx - 10 + i * 8), Math.round(fy), 4, 6);
     }
   }
-  if (WARN_PHASES.has(enemy.phase)) {
+  if (enemy.phase === 'windup') {
     const size = enemy.boss ? 28 : 18;
     ctx.font = `bold ${size}px "Courier New", monospace`;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#22161a';
-    ctx.fillText('!', cx + 2, enemy.y - 8 + 2);
+    ctx.fillText('!', cx + 2, top - 6);
     ctx.fillStyle = Math.floor(t * 12) % 2 ? '#ff3a3a' : '#ffe14a';
-    ctx.fillText('!', cx, enemy.y - 8);
+    ctx.fillText('!', cx, top - 8);
   }
   if (!enemy.boss && enemy.hp < enemy.maxHp) {
     const w = 30;
     ctx.fillStyle = '#22161a';
-    ctx.fillRect(Math.round(cx - w / 2) - 1, Math.round(enemy.y - 10), w + 2, 5);
+    ctx.fillRect(Math.round(cx - w / 2) - 1, Math.round(top - 10), w + 2, 5);
     ctx.fillStyle = '#ff5a5a';
-    ctx.fillRect(Math.round(cx - w / 2), Math.round(enemy.y - 9), Math.round((w * enemy.hp) / enemy.maxHp), 3);
+    ctx.fillRect(Math.round(cx - w / 2), Math.round(top - 9), Math.round((w * enemy.hp) / enemy.maxHp), 3);
   }
 }
 
@@ -414,31 +422,17 @@ function drawProjectile(ctx, attack, assets, camX) {
   const y = attack.y;
   if (x < -40 || x > VIEW.width + 40) return;
   if (attack.owner === 'enemy') {
-    if (attack.weapon === 'lob') {
-      ctx.save();
-      ctx.translate(Math.round(x), Math.round(y));
-      ctx.rotate(attack.age * 7);
-      ctx.fillStyle = 'rgba(224, 138, 58, 0.35)';
-      ctx.fillRect(-9, -9, 18, 18);
-      ctx.fillStyle = '#22161a';
-      ctx.fillRect(-6, -5, 12, 11);
-      ctx.fillStyle = '#e08a3a';
-      ctx.fillRect(-4, -3, 8, 7);
-      ctx.fillStyle = '#5a3618';
-      ctx.fillRect(-5, -6, 10, 4);
-      ctx.fillStyle = '#6de06d';
-      ctx.fillRect(1, -8, 3, 3);
-      ctx.restore();
-      return;
+    const durian = attack.kind === 'durian';
+    if (durian && attack.phase === 'armed') {
+      ctx.strokeStyle = Math.floor(attack.fuseTime * 16) % 2 ? '#ff4a3a' : '#ffd23f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, attack.blastRadius, 0, Math.PI * 2);
+      ctx.stroke();
     }
-    ctx.fillStyle = 'rgba(255, 80, 120, 0.35)';
-    ctx.fillRect(Math.round(x) - 9, Math.round(y) - 9, 18, 18);
-    ctx.fillStyle = '#22161a';
-    ctx.fillRect(Math.round(x) - 6, Math.round(y) - 6, 12, 12);
-    ctx.fillStyle = '#ff4a7a';
-    ctx.fillRect(Math.round(x) - 4, Math.round(y) - 4, 8, 8);
-    ctx.fillStyle = '#ffd0dc';
-    ctx.fillRect(Math.round(x) - 3, Math.round(y) - 3, 3, 3);
+    const scale = durian ? 22 / MONSTER_CLIPS.durian.bodyWidth : 30 / MONSTER_CLIPS.needle.bodyWidth;
+    const angle = durian ? 0 : Math.atan2(attack.vy, attack.vx);
+    drawMonsterFrame(ctx, assets, projectilePose(attack), x, y, scale, 1, angle);
     return;
   }
   moduleGlow(ctx, attack, x, y);
@@ -494,11 +488,15 @@ function drawProjectile(ctx, attack, assets, camX) {
   ctx.restore();
 }
 
-function drawEffects(ctx, run, camX) {
+function drawEffects(ctx, run, assets, camX) {
   ctx.textAlign = 'center';
   for (const effect of run.effects) {
     const p = effect.age / effect.ttl;
     const x = effect.x - camX;
+    if (effect.kind === 'durianExplosion') {
+      drawMonsterFrame(ctx, assets, projectilePose(effect), x, effect.y, effect.radius * 2 / MONSTER_CLIPS.durianExplosion.bodyWidth);
+      continue;
+    }
     if (effect.kind === 'explosion') {
       const r = effect.radius * (0.4 + p * 0.6);
       ctx.fillStyle = `rgba(255, 170, 60, ${0.5 * (1 - p)})`;
@@ -539,7 +537,7 @@ function drawBossBar(ctx, run) {
   ctx.font = 'bold 15px "Courier New", monospace';
   ctx.textAlign = 'center';
   ctx.fillStyle = '#fff4e0';
-  ctx.fillText('甜点大王 · 巨型蛋糕', VIEW.width / 2, y - 10);
+  ctx.fillText('榴莲投手 · 小老鼠', VIEW.width / 2, y - 10);
 }
 
 function drawVignette(ctx, run) {
@@ -557,11 +555,7 @@ function drawTitleScene(ctx, assets, t) {
   drawMid(ctx, theme, t * 20);
   drawPlatform(ctx, { x: 0, y: 440, w: VIEW.width, h: 100 }, theme, 'grass', 0);
   drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 8, sx: 1, sy: 1, dy: 0, rotate: 0 });
-  ctx.save();
-  ctx.translate(560, 300);
-  ctx.scale(1.4, 1.4);
-  ctx.drawImage(assets.sprites.walker, 0, 0);
-  ctx.restore();
+  drawMonsterFrame(ctx, assets, { clip: 'ant-idle', frame: Math.floor(t * 6) % 4 }, 590, 440, 0.6, -1);
   drawSprite(ctx, assets.sprites.coin, 420, 330 + Math.sin(t * 3) * 4);
   drawSprite(ctx, assets.sprites.coin, 460, 320 + Math.sin(t * 3 + 1) * 4);
 }
@@ -590,11 +584,11 @@ export function drawFrame(ctx, run, assets, viewTime) {
   for (const enemy of run.enemies) if (enemy.hp > 0) drawEnemy(ctx, enemy, assets, camX, viewTime);
   drawPlayer(ctx, run, assets, camX, viewTime);
   for (const attack of run.attacks) {
-    if (attack.age >= attack.ttl) continue;
+    if (attack.done || attack.age >= attack.ttl || attack.kind === 'enemyMelee') continue;
     if (attack.kind === 'melee') drawMeleeArc(ctx, attack, camX);
     else drawProjectile(ctx, attack, assets, camX);
   }
-  drawEffects(ctx, run, camX);
+  drawEffects(ctx, run, assets, camX);
   drawBossBar(ctx, run);
   drawVignette(ctx, run);
 }
