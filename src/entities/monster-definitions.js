@@ -7,8 +7,8 @@ export const SKILLS = {
 };
 
 export const MONSTERS = {
-  ant: { stats: { w: 34, h: 30, hp: 30, speed: 70 }, movement: 'ground', chaseSpeed: 112, detection: [420, 240], skills: ['bite'], animations: { idle: 'ant-idle', bite: 'ant-bite' }, boss: false },
-  boar: { stats: { w: 40, h: 32, hp: 44, speed: 60 }, movement: 'ground', chaseSpeed: 96, detection: [460, 110], skills: ['headbutt', 'charge'], animations: { idle: 'boar-idle', headbutt: 'boar-headbutt', charge: 'boar-charge' }, boss: false },
-  wasp: { stats: { w: 32, h: 30, hp: 26, speed: 120 }, movement: 'air', detection: [640, 300], skills: ['needle'], animations: { idle: 'wasp-idle', needle: 'wasp-fire' }, boss: false },
-  ratBoss: { stats: { w: 96, h: 96, hp: 700, speed: 60 }, movement: 'bossGround', detection: [1600, 540], skills: ['durianVolley'], animations: { idle: 'rat-idle', durianVolley: 'rat-throw' }, boss: true }
+  ant: { stats: { w: 34, h: 30, hp: 30, speed: 70 }, movement: 'ground', chaseSpeed: 112, detection: [420, 240], skills: ['bite'], animations: { idle: 'ant-idle', move: 'ant-move', bite: 'ant-bite' }, boss: false },
+  boar: { stats: { w: 40, h: 32, hp: 44, speed: 60 }, movement: 'ground', chaseSpeed: 96, detection: [460, 110], skills: ['headbutt', 'charge'], animations: { idle: 'boar-idle', move: 'boar-move', headbutt: 'boar-headbutt', charge: 'boar-charge' }, boss: false },
+  wasp: { stats: { w: 32, h: 30, hp: 26, speed: 120 }, movement: 'air', detection: [640, 300], skills: ['needle'], animations: { idle: 'wasp-idle', move: 'wasp-move', needle: 'wasp-fire' }, boss: false },
+  ratBoss: { stats: { w: 96, h: 96, hp: 700, speed: 60 }, movement: 'bossGround', detection: [1600, 540], skills: ['durianVolley'], animations: { idle: 'rat-idle', move: 'rat-move', durianVolley: 'rat-throw' }, boss: true }
 };
