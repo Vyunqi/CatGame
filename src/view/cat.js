@@ -4,10 +4,14 @@ import { CAT_FRAME_META } from './catFrameMeta.js';
 
 // Each spec indexes one of the 35 normalized drawings in assets/cat-frames/.
 // sx/sy/dy/rotate are per-pose squash, offset and spin applied at draw time.
+// The source locomotion drawings are ~15% smaller than the standing ones;
+// enlarge them at draw time so the cat does not shrink when it starts moving.
+export const LOCOMOTION_SCALE = 1.15;
+const locomotion = [6, 7, 8, 9, 10, 11, 12, 13].map(f => ({ f, sx: LOCOMOTION_SCALE, sy: LOCOMOTION_SCALE }));
 export const CAT_CLIPS = {
-  walk: [{ f: 6 }, { f: 7 }, { f: 8 }, { f: 9 }, { f: 10 }, { f: 11 }, { f: 12 }, { f: 13 }],
+  walk: locomotion,
   idle: [{ f: 0 }, { f: 1 }, { f: 2 }, { f: 3 }, { f: 4 }, { f: 5 }],
-  run: [{ f: 6 }, { f: 7 }, { f: 8 }, { f: 9 }, { f: 10 }, { f: 11 }, { f: 12 }, { f: 13 }],
+  run: locomotion,
   jump: [{ f: 16 }, { f: 17 }],
   fall: [{ f: 18, sy: 1.06 }],
   land: [{ f: 19, sx: 1.12, sy: 0.82 }, { f: 20, sx: 1.05, sy: 0.92 }],
