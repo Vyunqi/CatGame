@@ -2,23 +2,9 @@ import { catPose, CAT_CLIPS, CAT_SCALE, CAT_BASE } from './cat.js';
 import { LAND_DURATION } from '../world/physics.js';
 import { WEAPONS } from '../combat/catalog.js';
 import { MONSTER_CLIPS, monsterPose, projectilePose } from './monster-animation.js';
-
-export const VIEW = { width: 960, height: 540 };
-
-const THEMES = {
-  grass: {
-    skyTop: '#5b8fd0', skyBottom: '#b6dcf2', far: '#7fa9d6', mid: '#3f7d4e', midDark: '#2d5e3a',
-    top: '#62c24a', topDark: '#3b8c2f', body: '#9a5a2e', bodyDark: '#6e3c1e', ledge: '#b5713a', ledgeDark: '#7a4620'
-  },
-  dusk: {
-    skyTop: '#3b2a5e', skyBottom: '#f0a070', far: '#8a5a7e', mid: '#4a3050', midDark: '#2e1e36',
-    top: '#86b84a', topDark: '#527a2a', body: '#7a4a3a', bodyDark: '#4a2a22', ledge: '#a8683a', ledgeDark: '#6a3a1e'
-  },
-  castle: {
-    skyTop: '#161a36', skyBottom: '#4a4a7e', far: '#2e3258', mid: '#23263f', midDark: '#171a2c',
-    top: '#9a9ab2', topDark: '#5e5e78', body: '#5a5b74', bodyDark: '#3a3b50', ledge: '#8a7058', ledgeDark: '#5a4636'
-  }
-};
+import {
+  VIEW, THEMES, drawSky, drawFar, drawMid, drawChasm, drawCliff, drawBridge, drawDecor, drawMist
+} from './scenery.js';
 
 export function cameraFor(player, room) {
   return { x: Math.max(0, Math.min(room.width - VIEW.width, player.x + player.w / 2 - 360)), y: 0 };
@@ -36,119 +22,6 @@ export function groundShadow(player, room) {
   const t = 1 - (ground - feet) / 260;
   if (t <= 0) return null;
   return { y: ground, alpha: 0.3 * t, width: 40 * (0.5 + 0.5 * t) };
-}
-
-function hash(a, b) {
-  let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263);
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
-
-function drawSky(ctx, theme) {
-  const g = ctx.createLinearGradient(0, 0, 0, VIEW.height);
-  g.addColorStop(0, theme.skyTop);
-  g.addColorStop(1, theme.skyBottom);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, VIEW.width, VIEW.height);
-}
-
-function drawFar(ctx, theme, themeName, camX) {
-  const offset = camX * 0.2;
-  const span = 240;
-  const first = Math.floor(offset / span) - 1;
-  ctx.fillStyle = theme.far;
-  for (let i = first; i < first + 7; i++) {
-    const x = Math.round(i * span - offset);
-    const r = hash(i, 7);
-    if (themeName === 'castle') {
-      const h = 150 + Math.floor(r * 5) * 16;
-      ctx.fillRect(x + 40, VIEW.height - 120 - h, 64, h);
-      for (let b = 0; b < 4; b++) ctx.fillRect(x + 40 + b * 18, VIEW.height - 132 - h, 10, 12);
-      ctx.fillRect(x + 120, VIEW.height - 200, 96, 80);
-    } else if (themeName === 'dusk') {
-      const h = 80 + Math.floor(r * 6) * 16;
-      ctx.fillRect(x + 30, VIEW.height - 130 - h, 40, h);
-      ctx.fillRect(x + 70, VIEW.height - 130 - h * 0.6, 56, h * 0.6);
-      ctx.fillRect(x + 150, VIEW.height - 180, 24, 50);
-    } else {
-      const h = 64 + Math.floor(r * 5) * 16;
-      for (let s = 0; s < 6; s++) ctx.fillRect(x + s * 16, VIEW.height - 130 - h + Math.abs(3 - s) * 14, 16, h);
-      ctx.fillRect(x + 110, VIEW.height - 170, 120, 40);
-    }
-  }
-  ctx.fillRect(0, VIEW.height - 130, VIEW.width, 130);
-}
-
-function drawMid(ctx, theme, camX) {
-  const offset = camX * 0.5;
-  const span = 160;
-  const first = Math.floor(offset / span) - 1;
-  for (let i = first; i < first + 9; i++) {
-    const x = Math.round(i * span - offset);
-    const r = hash(i, 31);
-    const h = 48 + Math.floor(r * 4) * 16;
-    ctx.fillStyle = theme.midDark;
-    ctx.fillRect(x + 30, VIEW.height - 90 - 12, 12, 40);
-    ctx.fillStyle = theme.mid;
-    ctx.fillRect(x + 6, VIEW.height - 102 - h, 60, h);
-    ctx.fillRect(x + 14, VIEW.height - 118 - h, 44, 16);
-    ctx.fillStyle = theme.midDark;
-    ctx.fillRect(x + 6, VIEW.height - 102 - 8, 60, 8);
-  }
-}
-
-function drawPit(ctx) {
-  const g = ctx.createLinearGradient(0, 440, 0, VIEW.height);
-  g.addColorStop(0, 'rgba(20, 14, 24, 0)');
-  g.addColorStop(1, 'rgba(20, 14, 24, 0.92)');
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 440, VIEW.width, VIEW.height - 440);
-}
-
-function drawPlatform(ctx, p, theme, themeName, camX) {
-  const x0 = Math.max(p.x, camX - 16);
-  const x1 = Math.min(p.x + p.w, camX + VIEW.width + 16);
-  if (x1 <= x0) return;
-  const sx = Math.round(p.x - camX);
-  if (p.solid === false) {
-    ctx.fillStyle = '#22161a';
-    ctx.fillRect(sx - 2, p.y - 2, p.w + 4, p.h + 4);
-    ctx.fillStyle = theme.ledge;
-    ctx.fillRect(sx, p.y, p.w, p.h);
-    ctx.fillStyle = theme.ledgeDark;
-    for (let bx = 0; bx < p.w; bx += 24) ctx.fillRect(sx + bx, p.y, 2, p.h);
-    ctx.fillRect(sx, p.y + p.h - 4, p.w, 4);
-    return;
-  }
-  const h = VIEW.height - p.y + 4;
-  ctx.fillStyle = '#22161a';
-  ctx.fillRect(sx - 2, p.y - 2, p.w + 4, h + 2);
-  ctx.fillStyle = theme.body;
-  ctx.fillRect(sx, p.y, p.w, h);
-  const start = Math.floor((x0 - p.x) / 16) * 16;
-  for (let gx = start; gx < x1 - p.x; gx += 16) {
-    for (let gy = 16; gy < h; gy += 16) {
-      const r = hash(p.x + gx, p.y + gy);
-      ctx.fillStyle = theme.bodyDark;
-      if (themeName === 'castle') {
-        const shift = (gy / 16) % 2 ? 8 : 0;
-        ctx.fillRect(sx + gx + shift, p.y + gy, 2, 16);
-        ctx.fillRect(sx + gx, p.y + gy, 16, 2);
-      } else if (r < 0.35) {
-        ctx.fillRect(sx + gx + Math.floor(r * 30) % 12, p.y + gy + 4, 4, 4);
-      }
-    }
-  }
-  ctx.fillStyle = theme.top;
-  ctx.fillRect(sx, p.y, p.w, 12);
-  ctx.fillStyle = theme.topDark;
-  ctx.fillRect(sx, p.y + 12, p.w, 4);
-  for (let gx = start; gx < x1 - p.x; gx += 8) {
-    if (hash(p.x + gx, 3) < 0.5) ctx.fillRect(sx + gx, p.y + 16, 4, 4);
-    ctx.fillStyle = hash(gx + p.x, 9) < 0.5 ? theme.top : theme.topDark;
-    ctx.fillRect(sx + gx + 2, p.y - 4, 4, 4);
-    ctx.fillStyle = theme.topDark;
-  }
 }
 
 function drawSprite(ctx, image, x, y, { flip = false, alpha = 1, scale = 1, rotate = 0 } = {}) {
@@ -550,10 +423,15 @@ function drawVignette(ctx, run) {
 
 function drawTitleScene(ctx, assets, t) {
   const theme = THEMES.grass;
-  drawSky(ctx, theme);
-  drawFar(ctx, theme, 'grass', t * 20);
-  drawMid(ctx, theme, t * 20);
-  drawPlatform(ctx, { x: 0, y: 440, w: VIEW.width, h: 100 }, theme, 'grass', 0);
+  const ground = { x: 0, y: 440, w: VIEW.width, h: 100, solid: true };
+  const titleRoom = { index: 0, width: VIEW.width, mainPath: [ground], platforms: [ground], chests: [], exit: null };
+  drawSky(ctx, theme, t);
+  drawFar(ctx, theme, 'grass', t * 20, t);
+  drawMid(ctx, theme, 'grass', t * 20, t);
+  drawChasm(ctx, titleRoom, theme, 0, t);
+  drawCliff(ctx, ground, theme, 'grass', 0, t);
+  drawDecor(ctx, titleRoom, theme, 0, t);
+  drawMist(ctx, theme, t);
   drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 8, sx: 1, sy: 1, dy: 0, rotate: 0 });
   drawMonsterFrame(ctx, assets, { clip: 'ant-idle', frame: Math.floor(t * 6) % 4 }, 590, 440, 0.6, -1);
   drawSprite(ctx, assets.sprites.coin, 420, 330 + Math.sin(t * 3) * 4);
@@ -573,11 +451,16 @@ export function drawFrame(ctx, run, assets, viewTime) {
   const shake = run.state === 'playing' && run.shake > 0 ? Math.round(Math.sin(viewTime * 90) * run.shake * 24) : 0;
   const camX = camera.x + shake;
 
-  drawSky(ctx, theme);
-  drawFar(ctx, theme, room.theme, camera.x);
-  drawMid(ctx, theme, camera.x);
-  drawPit(ctx);
-  for (const p of room.platforms) drawPlatform(ctx, p, theme, room.theme, camX);
+  drawSky(ctx, theme, viewTime);
+  drawFar(ctx, theme, room.theme, camera.x, viewTime);
+  drawMid(ctx, theme, room.theme, camera.x, viewTime);
+  drawChasm(ctx, room, theme, camX, viewTime);
+  for (const p of room.platforms) {
+    if (p.solid === false) drawBridge(ctx, p, theme, camX, viewTime);
+    else drawCliff(ctx, p, theme, room.theme, camX, viewTime);
+  }
+  drawDecor(ctx, room, theme, camX, viewTime);
+  drawMist(ctx, theme, viewTime);
   drawExit(ctx, room, run.player, camX, viewTime);
   drawChests(ctx, room, run.player, assets, camX);
   drawPickups(ctx, run, assets, camX, viewTime);
