@@ -426,11 +426,11 @@ function drawTitleScene(ctx, assets, t) {
   const ground = { x: 0, y: 440, w: VIEW.width, h: 100, solid: true };
   const titleRoom = { index: 0, width: VIEW.width, mainPath: [ground], platforms: [ground], chests: [], exit: null };
   drawSky(ctx, theme, t);
-  drawFar(ctx, theme, 'grass', t * 20, t);
-  drawMid(ctx, theme, 'grass', t * 20, t);
-  drawChasm(ctx, titleRoom, theme, 0, t);
-  drawCliff(ctx, ground, theme, 'grass', 0, t);
-  drawDecor(ctx, titleRoom, theme, 0, t);
+  drawFar(ctx, theme, 'grass', t * 20, t, assets.terrain);
+  drawMid(ctx, theme, 'grass', t * 20, t, assets.terrain);
+  drawChasm(ctx, titleRoom, theme, 0, t, assets.terrain);
+  drawCliff(ctx, ground, theme, 'grass', 0, t, assets.terrain);
+  drawDecor(ctx, titleRoom, theme, 0, t, assets.terrain);
   drawMist(ctx, theme, t);
   drawCat(ctx, assets, 250, 440, 1, { clip: 'walk', frame: Math.floor(t * 6) % 8, sx: 1, sy: 1, dy: 0, rotate: 0 });
   drawMonsterFrame(ctx, assets, { clip: 'ant-idle', frame: Math.floor(t * 6) % 4 }, 590, 440, 0.6, -1);
@@ -452,14 +452,14 @@ export function drawFrame(ctx, run, assets, viewTime) {
   const camX = camera.x + shake;
 
   drawSky(ctx, theme, viewTime);
-  drawFar(ctx, theme, room.theme, camera.x, viewTime);
-  drawMid(ctx, theme, room.theme, camera.x, viewTime);
-  drawChasm(ctx, room, theme, camX, viewTime);
+  drawFar(ctx, theme, room.theme, camera.x, viewTime, assets.terrain);
+  drawMid(ctx, theme, room.theme, camera.x, viewTime, assets.terrain);
+  drawChasm(ctx, room, theme, camX, viewTime, assets.terrain);
   for (const p of room.platforms) {
-    if (p.solid === false) drawBridge(ctx, p, theme, camX, viewTime);
-    else drawCliff(ctx, p, theme, room.theme, camX, viewTime);
+    if (p.solid === false) drawBridge(ctx, p, theme, camX, viewTime, assets.terrain);
+    else drawCliff(ctx, p, theme, room.theme, camX, viewTime, assets.terrain);
   }
-  drawDecor(ctx, room, theme, camX, viewTime);
+  drawDecor(ctx, room, theme, camX, viewTime, assets.terrain);
   drawMist(ctx, theme, viewTime);
   drawExit(ctx, room, run.player, camX, viewTime);
   drawChests(ctx, room, run.player, assets, camX);

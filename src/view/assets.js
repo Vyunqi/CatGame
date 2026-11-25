@@ -328,13 +328,36 @@ function loadImage(src) {
   });
 }
 
+const TERRAIN_SHARED = ['bridge', 'torch', 'banner', 'fence', 'crate', 'tower', 'fall', 'pool'];
+const TERRAIN_THEMED = ['cap', 'body', 'edgeL', 'edgeR'];
+const TERRAIN_THEMES = ['grass', 'dusk', 'castle'];
+
+async function loadTerrain() {
+  const terrain = {};
+  const jobs = [];
+  for (const n of TERRAIN_SHARED) jobs.push(loadImage(`assets/terrain/${n}.png`).then(img => { terrain[n] = img; }));
+  for (const n of TERRAIN_THEMED) {
+    terrain[n] = {};
+    for (const t of TERRAIN_THEMES) {
+      jobs.push(loadImage(`assets/terrain/${n}${t === 'grass' ? '' : `-${t}`}.png`).then(img => { terrain[n][t] = img; }));
+    }
+  }
+  for (const layer of ['far', 'mid']) {
+    terrain[layer] = {};
+    for (const t of TERRAIN_THEMES) jobs.push(loadImage(`assets/terrain/${layer}-${t}.png`).then(img => { terrain[layer][t] = img; }));
+  }
+  await Promise.all(jobs);
+  return terrain;
+}
+
 export async function loadAssets() {
   const sprites = {};
   for (const name of [...Object.keys(WEAPONS), 'coin', 'chest']) sprites[name] = paintSprite(SPRITES[name]);
-  const [catFrames, frames] = await Promise.all([
+  const [catFrames, frames, terrain] = await Promise.all([
     Promise.all(Array.from({ length: 35 }, (_, i) => loadImage(`assets/cat-frames/f${String(i).padStart(2, '0')}.png`))),
-    Promise.all(MONSTER_FRAME_NAMES.map(name => loadImage(`assets/monster-frames/${name}.png`)))
+    Promise.all(MONSTER_FRAME_NAMES.map(name => loadImage(`assets/monster-frames/${name}.png`))),
+    loadTerrain()
   ]);
   const monsterFrames = Object.fromEntries(MONSTER_FRAME_NAMES.map((name, i) => [name, frames[i]]));
-  return { catFrames, sprites, monsterFrames };
+  return { catFrames, sprites, monsterFrames, terrain };
 }
