@@ -69,17 +69,6 @@ function block(x, y, w) {
   return { x, y, w, h: ROOM_HEIGHT - y, solid: true };
 }
 
-function nextSegment(rng, previous) {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    const gap = pick(rng, [0, 40, 56, 64, 72, 80]);
-    const rise = between(rng, -56, 56);
-    const y = Math.max(300, Math.min(460, previous.y - rise));
-    const candidate = block(previous.x + previous.w + gap, y, between(rng, 160, 360));
-    if (canReach(previous, candidate)) return candidate;
-  }
-  return block(previous.x + previous.w + 48, previous.y, 240);
-}
-
 function bossRoom(index) {
   const width = 1600;
   const ground = block(0, 440, width);
@@ -106,37 +95,24 @@ export function generateRoom(seed, index) {
   if (index >= BOSS_ROOM) return bossRoom(index);
   const rng = createRng((seed ^ Math.imul(index + 1, 0x9E3779B1)) >>> 0);
   const zone = zoneOf(index);
-  const targetWidth = between(rng, 2560, 3000);
-
-  const mainPath = [block(0, 440, between(rng, 420, 520))];
-  while (true) {
-    const last = mainPath[mainPath.length - 1];
-    if (last.x + last.w >= targetWidth - 360) break;
-    mainPath.push(nextSegment(rng, last));
+  const hasHighBridge = index % 2 === 0;
+  const heights = hasHighBridge ? [440, 392, 344, 296, 344, 392, 392] : [392, 344, 392, 440, 392, 344, 344];
+  const mainPath = [block(0, heights[0], between(rng, 380, 440))];
+  for (let i = 1; i < heights.length; i++) {
+    const prev = mainPath.at(-1);
+    const last = i === heights.length - 1;
+    const gap = !hasHighBridge && last ? 108 : between(rng, 40, 64);
+    mainPath.push(block(prev.x + prev.w + gap, heights[i], last ? 320 : between(rng, 216, 264)));
   }
-  const last = mainPath[mainPath.length - 1];
-  let exitBlock = block(last.x + last.w + 48, last.y, 360);
-  if (!canReach(last, exitBlock)) exitBlock = block(last.x + last.w + 40, last.y, 360);
-  mainPath.push(exitBlock);
+  const exitBlock = mainPath.at(-1);
   const width = exitBlock.x + exitBlock.w;
-
-  const extras = [];
-  const coins = [];
-  for (let i = 1; i < mainPath.length - 1; i++) {
-    const seg = mainPath[i];
-    if (seg.w >= 220 && rng() < 0.45) {
-      const w = between(rng, 96, 150);
-      const x = seg.x + between(rng, 20, seg.w - w - 20);
-      const y = seg.y - between(rng, 96, 108);
-      extras.push({ x, y, w, h: 16, solid: false });
-      for (let c = 0; c < 3; c++) coins.push({ x: x + 16 + c * ((w - 32) / 2), y: y - 22 });
-    } else if (rng() < 0.5) {
-      coins.push({ x: seg.x + seg.w / 2, y: seg.y - 26 });
-    }
-  }
-
-  const middle = mainPath.slice(1, -1).sort((a, b) => b.w - a.w);
-  const chestSeg = middle[Math.floor(rng() * Math.min(3, middle.length))] ?? mainPath[0];
+  const summit = mainPath[3];
+  const beforeExit = mainPath.at(-2);
+  const branch = hasHighBridge
+    ? { x: summit.x + Math.floor((summit.w - 128) / 2), y: summit.y - 68, w: 128, h: 16, solid: false }
+    : block(beforeExit.x + beforeExit.w + 8, beforeExit.y + 64, 92);
+  const coins = hasHighBridge ? [20, 64, 108].map(dx => ({ x: branch.x + dx, y: branch.y - 22 })) : [];
+  const chestSeg = hasHighBridge ? mainPath[2] : branch;
   const chests = [{ x: chestSeg.x + chestSeg.w / 2 - 16, y: chestSeg.y - 28, w: 32, h: 28, opened: false }];
 
   const spawnSegments = mainPath.slice(1);
@@ -152,7 +128,7 @@ export function generateRoom(seed, index) {
 
   return {
     width, height: ROOM_HEIGHT, index, theme: THEMES[zone],
-    platforms: [...mainPath, ...extras],
+    platforms: [...mainPath, branch],
     mainPath,
     spawn: { x: 80, y: mainPath[0].y - MOTION.height },
     exit: { x: exitBlock.x + exitBlock.w - 140, y: exitBlock.y - 96, w: 64, h: 96 },

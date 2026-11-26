@@ -1,37 +1,35 @@
 export const VIEW = { width: 960, height: 540 };
 
-// Palette sampled from the floating-ruins reference art: blue-grey stone,
-// lush moss caps, cyan water, warm wood and heraldic red banners.
 export const THEMES = {
   grass: {
-    skyTop: '#79bfe8', skyBottom: '#dff2fb', sun: '#fff6d8',
+    skyTop: '#293b51', skyBottom: '#435365', sun: '#fff6d8',
     far: '#a9c2d0', farGrass: '#8fd06a', farHole: '#cfe6f2',
     mid: '#7d94a4', midDark: '#5f7684', midGrass: '#69b845', tree: '#4f9e3a', treeLight: '#7ec850',
     stone: '#8ba0ac', stoneDark: '#6b8290', stoneLight: '#a8bcc6', mortar: '#5a707c', edge: '#41565f',
     moss: '#5aa832', top: '#8fd455', topDark: '#57a832', tuft: '#b8e878', flower: '#ffd7e8',
     water: '#3fc0e8', waterLight: '#9fe8f8', waterDeep: '#2a9cc4',
     wood: '#a9743f', woodDark: '#7c5226', woodLight: '#c99a5f', rope: '#8a6a3a',
-    banner: '#d84343', gold: '#f4c542', cloud: '#ffffff', mist: '#e6f4fb'
+    banner: '#d84343', gold: '#f4c542', cloud: '#ffffff', mist: '#172937'
   },
   dusk: {
-    skyTop: '#4a2a5e', skyBottom: '#ffb070', sun: '#ffd9a0',
+    skyTop: '#3a3246', skyBottom: '#5b4c5b', sun: '#ffd9a0',
     far: '#8a5a7e', farGrass: '#a8b84a', farHole: '#e8a070',
     mid: '#5e4060', midDark: '#463048', midGrass: '#86a83a', tree: '#5e7a2a', treeLight: '#96b84a',
     stone: '#8a7a72', stoneDark: '#6a5a54', stoneLight: '#a8988e', mortar: '#5a4a46', edge: '#3e3230',
     moss: '#7a9a30', top: '#a8b84a', topDark: '#6a8a2a', tuft: '#d0d878', flower: '#ffe8b0',
     water: '#e8a05a', waterLight: '#ffd0a0', waterDeep: '#c47a3a',
     wood: '#a9743f', woodDark: '#6a421e', woodLight: '#c99a5f', rope: '#8a6a3a',
-    banner: '#c43a3a', gold: '#f4c542', cloud: '#ffd9b8', mist: '#f0c0a0'
+    banner: '#c43a3a', gold: '#f4c542', cloud: '#ffd9b8', mist: '#241d2c'
   },
   castle: {
-    skyTop: '#161a36', skyBottom: '#4a4a7e', sun: '#e8e8ff',
+    skyTop: '#282e45', skyBottom: '#464d66', sun: '#e8e8ff',
     far: '#2e3258', farGrass: '#3f8f7a', farHole: '#4a4a7e',
     mid: '#23263f', midDark: '#171a2c', midGrass: '#3f7d6a', tree: '#2d5e4a', treeLight: '#4f9e7a',
     stone: '#5a5b74', stoneDark: '#3a3b50', stoneLight: '#7a7b94', mortar: '#2e2f42', edge: '#1e1f30',
     moss: '#3f8f7a', top: '#9a9ab2', topDark: '#5e5e78', tuft: '#c0c0d8', flower: '#e8d8ff',
     water: '#7f8fd8', waterLight: '#b0c0f0', waterDeep: '#5a6ab8',
     wood: '#8a7058', woodDark: '#5a4636', woodLight: '#a89070', rope: '#6a5a42',
-    banner: '#a83a4a', gold: '#d8b84a', cloud: '#8a8ab8', mist: '#3a3a5e'
+    banner: '#a83a4a', gold: '#d8b84a', cloud: '#8a8ab8', mist: '#171a2c'
   }
 };
 
@@ -44,39 +42,6 @@ function hash(a, b) {
 function rgba(hex, alpha) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
-}
-
-function mixHex(a, b, u) {
-  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-  const ch = sh => Math.round(((pa >> sh) & 255) * (1 - u) + ((pb >> sh) & 255) * u);
-  return `#${((ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).padStart(6, '0')}`;
-}
-
-// Opaque backdrop strips meet the painted sky with a short fade instead of a hard seam.
-function fadeTop(ctx, theme, y, h) {
-  const sky = mixHex(theme.skyTop, theme.skyBottom, y / VIEW.height);
-  const g = ctx.createLinearGradient(0, y, 0, y + h);
-  g.addColorStop(0, rgba(sky, 1));
-  g.addColorStop(1, rgba(sky, 0));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, y, VIEW.width, h);
-}
-
-function tileStrip(ctx, img, y, offset) {
-  const first = Math.floor(offset / img.width) - 1;
-  for (let i = first; i < first + Math.ceil(VIEW.width / img.width) + 2; i++) {
-    ctx.drawImage(img, Math.round(i * img.width - offset), y);
-  }
-}
-
-// Strip bottoms dissolve into haze so their edge never cuts across the sky.
-function fadeBottom(ctx, theme, yEnd, h) {
-  const sky = mixHex(theme.skyTop, theme.skyBottom, yEnd / VIEW.height);
-  const g = ctx.createLinearGradient(0, yEnd - h, 0, yEnd);
-  g.addColorStop(0, rgba(sky, 0));
-  g.addColorStop(1, rgba(sky, 1));
-  ctx.fillStyle = g;
-  ctx.fillRect(0, yEnd - h, VIEW.width, h);
 }
 
 function withAlpha(ctx, alpha, fn) {
@@ -97,8 +62,9 @@ export function waterfallSpans(room) {
 }
 
 const DECOR_KINDS = ['torch', 'banner', 'fence', 'bush', 'flower', 'crate'];
+const SPARSE_DECOR_KINDS = ['torch', 'crate', 'fence'];
 
-export function decorFor(room) {
+export function decorFor(room, sparse = false) {
   const zones = [];
   if (room.exit) zones.push([room.exit.x - 50, room.exit.x + room.exit.w + 50]);
   for (const c of room.chests ?? []) zones.push([c.x - 44, c.x + c.w + 44]);
@@ -107,23 +73,26 @@ export function decorFor(room) {
     if (seg.w < 120) return;
     const start = Math.max(seg.x + 28, i === 0 ? 170 : 0);
     const end = seg.x + seg.w - 28;
-    for (let x = start; x <= end; x += 88) {
+    for (let x = start; x <= end; x += sparse ? 210 : 88) {
       const px = Math.max(start, Math.min(end, x + Math.floor(hash(x, i + 1) * 40) - 20));
       if (zones.some(([a, b]) => px >= a && px <= b)) continue;
-      const r = hash(px, room.index + 13);
-      const kind = DECOR_KINDS[Math.min(DECOR_KINDS.length - 1, Math.floor(r * DECOR_KINDS.length))];
+      if (sparse && out.length && px - out.at(-1).x < 180) continue;
+      const kind = sparse
+        ? SPARSE_DECOR_KINDS[out.length % SPARSE_DECOR_KINDS.length]
+        : DECOR_KINDS[Math.floor(hash(px, room.index + 13) * DECOR_KINDS.length)];
       out.push({ kind, x: px, y: seg.y, v: hash(px, 77) });
     }
   });
   return out;
 }
 
-export function drawSky(ctx, theme, t) {
+export function drawSky(ctx, theme, t, art) {
   const g = ctx.createLinearGradient(0, 0, 0, VIEW.height);
   g.addColorStop(0, theme.skyTop);
   g.addColorStop(1, theme.skyBottom);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, VIEW.width, VIEW.height);
+  if (art) return;
   const sx = 760, sy = 64;
   withAlpha(ctx, 0.25, () => { ctx.fillStyle = theme.sun; ctx.fillRect(sx - 10, sy - 10, 44, 44); });
   ctx.fillStyle = theme.sun;
@@ -135,10 +104,13 @@ export function drawSky(ctx, theme, t) {
 
 export function drawFar(ctx, theme, name, camX, t, art) {
   if (art) {
-    tileStrip(ctx, art.far[name], 150, camX * 0.15 + t * 3);
-    fadeTop(ctx, theme, 150, 36);
-    fadeBottom(ctx, theme, 150 + art.far[name].height, 46);
-  } else {
+    const img = art.far[name];
+    const offset = Math.round(camX * 0.15) % img.width;
+    for (let x = -offset; x < VIEW.width; x += img.width) {
+      ctx.drawImage(img, x, 62, img.width, 332);
+    }
+    return;
+  }
   const offset = camX * 0.15 + t * 3;
   const span = 320;
   const first = Math.floor(offset / span) - 1;
@@ -190,7 +162,6 @@ export function drawFar(ctx, theme, name, camX, t, art) {
       ctx.fillRect(x + w - 16, top + 142, 12, 6);
     });
   }
-  }
   const cloudOffset = camX * 0.08 + t * 8;
   const cspan = 260;
   const cfirst = Math.floor(cloudOffset / cspan) - 1;
@@ -204,7 +175,6 @@ export function drawFar(ctx, theme, name, camX, t, art) {
       ctx.fillRect(x + 28, y + 12, 70, 10);
     }
   });
-  if (art) return;
   withAlpha(ctx, 0.35, () => {
     ctx.fillStyle = theme.cloud;
     ctx.fillRect(0, 402, VIEW.width, 138);
@@ -215,17 +185,7 @@ export function drawFar(ctx, theme, name, camX, t, art) {
 }
 
 export function drawMid(ctx, theme, name, camX, t, art) {
-  if (art) {
-    const offset = camX * 0.45;
-    tileStrip(ctx, art.mid[name], 300, offset);
-    const span = art.mid[name].width;
-    const first = Math.floor(offset / span) - 1;
-    for (let i = first; i < first + Math.ceil(VIEW.width / span) + 2; i++) {
-      if (hash(i, 57) < 0.35) ctx.drawImage(art.tower, Math.round(i * span - offset) + 40, 300 + art.mid[name].height - 273);
-    }
-    fadeBottom(ctx, theme, 300 + art.mid[name].height, 30);
-    return;
-  }
+  if (art) return;
   const offset = camX * 0.45;
   const span = 220;
   const first = Math.floor(offset / span) - 1;
@@ -281,33 +241,18 @@ export function drawMid(ctx, theme, name, camX, t, art) {
 
 export function drawChasm(ctx, room, theme, camX, t, art) {
   if (art) {
-    for (const s of waterfallSpans(room)) {
-      const sx = Math.round(s.x - camX);
-      if (sx > VIEW.width + 40 || sx + s.w < -40) continue;
-      const w = Math.min(s.w, 30);
-      const x = sx + Math.floor((s.w - w) / 2);
-      const top = s.y + 4;
-      ctx.drawImage(art.fall, x, top, w, 508 - top);
-      withAlpha(ctx, 0.5, () => {
-        ctx.fillStyle = theme.waterLight;
-        const phase = Math.floor(t * 160) % 40;
-        for (let y = top - 40 + phase; y < 506; y += 40) {
-          if (y < top) continue;
-          ctx.fillRect(x + Math.floor(w / 2) - 1, y, 2, 18);
-        }
-      });
+    let previous = -Infinity;
+    const w = art.fall.width;
+    for (const seg of room.mainPath) {
+      if (seg.w < 160) continue;
+      const x = seg.x + seg.w - 70;
+      if (x - previous < 610) continue;
+      previous = x;
+      const sx = Math.round(x - camX);
+      if (sx >= VIEW.width || sx + w <= 0) continue;
+      const top = seg.y + 16;
+      ctx.drawImage(art.fall, sx, top, w, VIEW.height - top);
     }
-    const drift = ((Math.floor(camX) % 76) + 76) % 76;
-    for (let x = -drift; x < VIEW.width; x += 76) ctx.drawImage(art.pool, x, 506);
-    ctx.fillStyle = theme.waterDeep;
-    ctx.fillRect(0, 524, VIEW.width, 16);
-    withAlpha(ctx, 0.7, () => {
-      ctx.fillStyle = theme.waterLight;
-      const slide = Math.floor(t * 20) % 32;
-      for (let x = -slide; x < VIEW.width; x += 32) {
-        ctx.fillRect(x, 508 + Math.floor(hash(x + slide, 29) * 4) * 3, 7, 2);
-      }
-    });
     return;
   }
   for (const s of waterfallSpans(room)) {
@@ -355,32 +300,39 @@ export function drawChasm(ctx, room, theme, camX, t, art) {
   });
 }
 
-export function drawCliff(ctx, p, theme, name, camX, t, art) {
+const PLATFORM_MODULES = [
+  { key: 'platform-banner', deck: 34 },
+  { key: 'platform-alcove', deck: 39 },
+  { key: 'platform-quiet', deck: 34 }
+];
+
+export function drawCliff(ctx, p, theme, name, camX, t, art, room) {
   const x0 = Math.max(p.x, camX - 16);
   const x1 = Math.min(p.x + p.w, camX + VIEW.width + 16);
   if (x1 <= x0) return;
   const sx = Math.round(p.x - camX);
+  if (art && room?.exit) {
+    const protectedDeck = p.w < 200 || [room.exit, ...room.chests].some(q => q.x < p.x + p.w && q.x + q.w > p.x);
+    const variant = (room.platforms.indexOf(p) + room.index) % PLATFORM_MODULES.length;
+    const { key, deck } = PLATFORM_MODULES[protectedDeck ? 2 : variant];
+    const image = art[key];
+    const scale = Math.min(2, p.w / image.width);
+    ctx.drawImage(art['platform-quiet'], 16, 40, 80, 36, sx, p.y, p.w, p.h);
+    ctx.drawImage(image, sx, p.y - deck * scale, p.w, image.height * scale);
+    return;
+  }
   if (art) {
     const cap = art.cap[name], body = art.body[name];
-    ctx.fillStyle = theme.stoneDark;
-    ctx.fillRect(sx, p.y + 12, p.w, VIEW.height - p.y);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(sx - 14, p.y - 12, p.w + 28, VIEW.height - p.y + 16);
-    ctx.clip();
-    for (let by = p.y + 14; by < VIEW.height; by += 36) {
-      for (let bx = 0; bx < p.w; bx += 30) {
-        const bw = Math.min(30, p.w - bx);
-        ctx.drawImage(body, 0, 0, bw, 36, sx + bx, by, bw, 36);
+    for (const [tile, top, bottom] of [[cap, p.y, p.y + cap.height], [body, p.y + cap.height, VIEW.height]]) {
+      const start = Math.floor((x0 - p.x) / tile.width) * tile.width;
+      for (let y = top; y < bottom; y += tile.height) {
+        const h = Math.min(tile.height, bottom - y);
+        for (let x = start; x < x1 - p.x; x += tile.width) {
+          const w = Math.min(tile.width, p.w - x);
+          ctx.drawImage(tile, 0, 0, w, h, sx + x, y, w, h);
+        }
       }
     }
-    for (let bx = 0; bx < p.w; bx += 46) {
-      const cw = Math.min(46, p.w - bx);
-      ctx.drawImage(cap, 0, 0, cw, 24, sx + bx, p.y - 10, cw, 24);
-    }
-    ctx.restore();
-    ctx.drawImage(art.edgeL[name], sx - 12, p.y - 10);
-    ctx.drawImage(art.edgeR[name], sx + p.w - 12, p.y - 10);
     return;
   }
   const h = VIEW.height - p.y + 4;
@@ -463,7 +415,7 @@ export function drawBridge(ctx, p, theme, camX, t, art) {
   const sx = Math.round(p.x - camX);
   if (sx > VIEW.width + 40 || sx + p.w < -40) return;
   if (art) {
-    ctx.drawImage(art.bridge, sx - 20, p.y - 26, p.w + 40, 64);
+    ctx.drawImage(art.bridge, sx, p.y - 19, p.w, art.bridge.height);
     return;
   }
   ctx.fillStyle = theme.woodDark;
@@ -499,28 +451,13 @@ export function drawBridge(ctx, p, theme, camX, t, art) {
 }
 
 export function drawDecor(ctx, room, theme, camX, t, art) {
-  for (const d of decorFor(room)) {
+  if (art && room.exit) return;
+  const alpha = ctx.globalAlpha;
+  if (art) ctx.globalAlpha *= 0.72;
+  for (const d of decorFor(room, Boolean(art))) {
     const sx = Math.round(d.x - camX);
     if (sx > VIEW.width + 40 || sx < -60) continue;
     const y = d.y;
-    if (art) {
-      if (d.kind === 'torch') {
-        const f = Math.floor(t * 10 + d.v * 10) % 2;
-        withAlpha(ctx, 0.1 + 0.06 * f, () => { ctx.fillStyle = theme.gold; ctx.fillRect(sx - 6, y - 48, 12, 16); });
-        ctx.drawImage(art.torch, sx - 8, y - 50);
-        continue;
-      }
-      if (d.kind === 'banner') {
-        ctx.fillStyle = theme.woodDark;
-        ctx.fillRect(sx, y - 58, 3, 58);
-        ctx.fillStyle = theme.gold;
-        ctx.fillRect(sx - 1, y - 60, 5, 3);
-        ctx.drawImage(art.banner, sx + 3 + Math.round(Math.sin(t * 3 + d.v * 6)), y - 56);
-        continue;
-      }
-      if (d.kind === 'fence') { ctx.drawImage(art.fence, sx - 31, y - 18); continue; }
-      if (d.kind === 'crate') { ctx.drawImage(art.crate, sx - 15, y - 28); continue; }
-    }
     if (d.kind === 'torch') {
       ctx.fillStyle = theme.woodDark;
       ctx.fillRect(sx, y - 22, 4, 22);
@@ -576,14 +513,16 @@ export function drawDecor(ctx, room, theme, camX, t, art) {
       ctx.fillRect(sx - 6, y - 12, 4, 4);
     }
   }
+  ctx.globalAlpha = alpha;
 }
 
-export function drawMist(ctx, theme, t) {
+export function drawMist(ctx, theme, t, art) {
   const g = ctx.createLinearGradient(0, 478, 0, VIEW.height);
   g.addColorStop(0, rgba(theme.mist, 0));
-  g.addColorStop(1, rgba(theme.mist, 0.85));
+  g.addColorStop(1, rgba(theme.mist, art ? 0.68 : 0.85));
   ctx.fillStyle = g;
   ctx.fillRect(0, 478, VIEW.width, VIEW.height - 478);
+  if (art) return;
   withAlpha(ctx, 0.45, () => {
     ctx.fillStyle = theme.cloud;
     for (let i = 0; i < 10; i++) {

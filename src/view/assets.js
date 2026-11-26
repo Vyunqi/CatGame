@@ -328,8 +328,8 @@ function loadImage(src) {
   });
 }
 
-const TERRAIN_SHARED = ['bridge', 'torch', 'banner', 'fence', 'crate', 'tower', 'fall', 'pool'];
-const TERRAIN_THEMED = ['cap', 'body', 'edgeL', 'edgeR'];
+const TERRAIN_SHARED = ['bridge', 'fall', 'platform-banner', 'platform-alcove', 'platform-quiet'];
+const TERRAIN_THEMED = ['cap', 'body', 'far'];
 const TERRAIN_THEMES = ['grass', 'dusk', 'castle'];
 
 async function loadTerrain() {
@@ -339,12 +339,9 @@ async function loadTerrain() {
   for (const n of TERRAIN_THEMED) {
     terrain[n] = {};
     for (const t of TERRAIN_THEMES) {
-      jobs.push(loadImage(`assets/terrain/${n}${t === 'grass' ? '' : `-${t}`}.png`).then(img => { terrain[n][t] = img; }));
+      const suffix = t === 'grass' && n !== 'far' ? '' : `-${t}`;
+      jobs.push(loadImage(`assets/terrain/${n}${suffix}.png`).then(img => { terrain[n][t] = img; }));
     }
-  }
-  for (const layer of ['far', 'mid']) {
-    terrain[layer] = {};
-    for (const t of TERRAIN_THEMES) jobs.push(loadImage(`assets/terrain/${layer}-${t}.png`).then(img => { terrain[layer][t] = img; }));
   }
   await Promise.all(jobs);
   return terrain;

@@ -397,8 +397,11 @@ kbd {
 .panel::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
 @media (max-width: 700px) {
-  .stage { container-type: normal; }
-  .ui { font-size: clamp(10px, 2.8vw, 14px); }
+  .stage { container-type: normal; aspect-ratio: auto; }
+  #game { height: auto; }
+  .ui { display: contents; font-size: clamp(10px, 2.8vw, 14px); }
+  .hud { position: static; background: var(--panel); }
+  .hud-weapons { flex-wrap: wrap; }
   .screen { position: fixed; inset: 0; z-index: 40; padding: 12px; }
   .panel { max-height: calc(100vh - 24px); }
 }

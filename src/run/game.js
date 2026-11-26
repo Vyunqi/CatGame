@@ -93,13 +93,17 @@ function handleRoomCompletion(run) {
   run.state = 'reward';
 }
 
+export function canOpenChest(player, chest) {
+  return !chest.opened && overlaps(player, chest, 24);
+}
+
 function handleInteraction(run) {
   const exit = run.room.exit;
   if (exit && overlaps(run.player, exit, 16)) {
     if (!advanceRoom(run).ok) pushText(run, '先清空房间的敌人');
     return;
   }
-  const chest = run.room.chests.find(c => !c.opened && overlaps(run.player, c, 24));
+  const chest = run.room.chests.find(c => canOpenChest(run.player, c));
   if (chest) openChest(run, chest);
 }
 
